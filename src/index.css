@@ -1,152 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 @import "tailwindcss";
 
+/* THESE ARE PLACEHOLDER FOR EMPTY APP, FEEL FREE TO REPLACE WITH DESIRED DESIGN */
+
 @theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-heading: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
-
-  --color-primary: oklch(0.546 0.131 242.75);
-  --color-primary-hover: oklch(0.486 0.131 242.75);
-  --color-on-primary: oklch(1 0 0);
-  --color-secondary: oklch(0.6847 0.1479 237.32);
-  --color-accent: oklch(0.6271 0.1699 149.21);
-  --color-accent-hover: oklch(0.5671 0.1699 149.21);
-  --color-background: oklch(0.141 0.021 240);
-  --color-foreground: oklch(0.92 0.012 240);
-  --color-muted: oklch(0.85 0.01 240);
-  --color-muted-bg: oklch(0.185 0.02 240);
-  --color-card: oklch(0.195 0.025 240);
-  --color-card-hover: oklch(0.215 0.025 240);
-  --color-border: oklch(0.25 0.03 240);
-  --color-destructive: oklch(0.5771 0.2152 27.33);
-  --color-ring: oklch(0.546 0.131 242.75);
-  --color-success: oklch(0.6271 0.1699 149.21);
-  --color-warning: oklch(0.755 0.151 63.21);
-  --color-warning-bg: oklch(0.755 0.151 63.21 / 0.12);
-  --color-success-bg: oklch(0.6271 0.1699 149.21 / 0.12);
-  --color-error-bg: oklch(0.5771 0.2152 27.33 / 0.12);
-
-  --shadow-card: 0 1px 3px rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-card-hover: 0 4px 12px rgb(0 0 0 / 0.5);
-  --shadow-glow: 0 0 20px oklch(0.546 0.131 242.75 / 0.15);
-  --shadow-input-focus: 0 0 0 3px oklch(0.546 0.131 242.75 / 0.25);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --color-text-muted: oklch(0.9015 0.0154 241.79);
 }
 
-@layer base {
-  body {
-    @apply bg-background text-foreground font-sans antialiased;
-  }
-
-  *:focus-visible {
-    @apply outline-2 outline-offset-2 outline-ring;
-  }
-}
-
-/* =============================================================
-   Button utilities
-   ============================================================= */
-.btn-primary {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary
-         transition-all duration-150 ease-out cursor-pointer;
-}
-.btn-primary:hover {
-  @apply bg-primary-hover;
-}
-.btn-primary:active {
-  @apply scale-[0.97];
-}
-.btn-primary:disabled {
-  @apply opacity-50 cursor-not-allowed scale-100;
-}
-
-.btn-secondary {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-transparent px-5 py-2.5 text-sm font-semibold text-foreground
-         transition-all duration-150 ease-out cursor-pointer;
-}
-.btn-secondary:hover {
-  @apply bg-card-hover border-primary/50;
-}
-.btn-secondary:active {
-  @apply scale-[0.97];
-}
-.btn-secondary:disabled {
-  @apply opacity-50 cursor-not-allowed scale-100;
-}
-
-.btn-destructive {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-destructive/10 border border-destructive/30 px-5 py-2.5 text-sm font-semibold text-destructive
-         transition-all duration-150 ease-out cursor-pointer;
-}
-.btn-destructive:hover {
-  @apply bg-destructive/20;
-}
-
-/* =============================================================
-   Input utilities
-   ============================================================= */
-.input-field {
-  @apply w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted/50
-         transition-all duration-150 ease-out;
-}
-.input-field:focus {
-  @apply border-primary shadow-input-focus outline-none;
-}
-.input-field::placeholder {
-  @apply text-muted/40;
-}
-
-.textarea-field {
-  @apply input-field resize-y min-h-[120px];
-}
-
-/* =============================================================
-   Card utility
-   ============================================================= */
-.card-base {
-  @apply rounded-xl border border-border bg-card p-6 shadow-card transition-all duration-150;
-}
-
-/* =============================================================
-   Status badge utilities
-   ============================================================= */
-.badge-score {
-  @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
-}
-
-/* =============================================================
-   Skeleton loader
-   ============================================================= */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.skeleton {
-  @apply rounded-lg;
-  background: linear-gradient(
-    90deg,
-    oklch(0.22 0.02 240) 25%,
-    oklch(0.26 0.02 240) 50%,
-    oklch(0.22 0.02 240) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-}
-
-/* =============================================================
-   Scrollbar styling
-   ============================================================= */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: oklch(0.3 0.03 240);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.4 0.03 240);
+.bg-dotgrid-glow {
+  background-color: oklch(0.1638 0 0);
+  background-image:
+    radial-gradient(
+      circle at 50% 118%,
+      oklch(0.41 0.14 250 / 45%) 0%,
+      oklch(0.41 0.14 250 / 22%) 22%,
+      oklch(0.41 0.14 250 / 10%) 32%,
+      oklch(0.41 0.14 250 / 4%) 38%,
+      transparent 45%
+    ),
+    radial-gradient(oklch(0.41 0.14 250 / 4%) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    16px 16px;
+  background-position: center, center;
 }
