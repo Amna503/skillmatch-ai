@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   uploadResume,
   listResumes,
+  deleteResume,
   createJobDescription,
   listJobDescriptions,
   runMatch,
@@ -26,6 +27,9 @@ import {
   ChevronUp,
   Clock,
   TrendingUp,
+  Search,
+  Trash2,
+  Plus,
 } from "lucide-react";
 
 /* ────────────────────────────────────────────
@@ -47,6 +51,75 @@ function scoreColor(score: number) {
   return "text-destructive bg-error-bg";
 }
 
+const UPLOAD_MESSAGES = [
+  "Reading your resume…",
+  "Extracting text…",
+  "Analyzing skills…",
+  "Almost done…",
+];
+
+/* ────────────────────────────────────────────
+   Animated Score Ring
+   ──────────────────────────────────────────── */
+function ScoreRing({ score }: { score: number }) {
+  const radius = 56;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (Math.min(score, 100) / 100) * circumference;
+
+  const ringColor =
+    score >= 75
+      ? "stroke-success"
+      : score >= 40
+        ? "stroke-warning"
+        : "stroke-destructive";
+
+  const textColor =
+    score >= 75
+      ? "text-success"
+      : score >= 40
+        ? "text-warning"
+        : "text-destructive";
+
+  return (
+    <div
+      className="relative inline-flex items-center justify-center"
+      role="progressbar"
+      aria-valuenow={score}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={`Match score: ${score}%`}
+    >
+      <svg width="140" height="140" className="-rotate-90">
+        {/* Background circle */}
+        <circle
+          cx="70"
+          cy="70"
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          className="text-border opacity-30"
+          strokeWidth="10"
+        />
+        {/* Foreground circle */}
+        <circle
+          cx="70"
+          cy="70"
+          r={radius}
+          fill="none"
+          className={`${ringColor} transition-all duration-1000 ease-out`}
+          strokeWidth="10"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <span className={`absolute text-3xl font-extrabold ${textColor}`}>
+        {score}%
+      </span>
+    </div>
+  );
+}
+
 /* ────────────────────────────────────────────
    DashboardPage
    ──────────────────────────────────────────── */
@@ -61,8 +134,10 @@ export default function DashboardPage() {
 
   // Upload state
   const [uploading, setUploading] = useState(false);
+  const [uploadMsgIndex, setUploadMsgIndex] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadMsgTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Job form state
   const [showJobForm, setShowJobForm] = useState(false);
@@ -70,6 +145,9 @@ export default function DashboardPage() {
   const [jobCompany, setJobCompany] = useState("");
   const [jobDesc, setJobDesc] = useState("");
   const [jobSaving, setJobSaving] = useState(false);
+
+  // Job search
+  const [jobSearch, setJobSearch] = useState("");
 
   // Feedback
   const [error, setError] = useState("");
@@ -87,6 +165,24 @@ export default function DashboardPage() {
     Promise.all([loadResumes(), loadJobs()]).finally(() => setInitialLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Rotate upload messages ──
+  useEffect(() => {
+    if (uploading) {
+      uploadMsgTimerRef.current = setInterval(() => {
+        setUploadMsgIndex((prev) => (prev + 1) % UPLOAD_MESSAGES.length);
+      }, 2500);
+    } else {
+      if (uploadMsgTimerRef.current) {
+        clearInterval(uploadMsgTimerRef.current);
+        uploadMsgTimerRef.current = null;
+      }
+      setUploadMsgIndex(0);
+    }
+    return () => {
+      if (uploadMsgTimerRef.current) clearInterval(uploadMsgTimerRef.current);
+    };
+  }, [uploading]);
 
   // ── Fetch recommended jobs when resume changes ──
   useEffect(() => {
@@ -176,6 +272,28 @@ export default function DashboardPage() {
     await uploadFile(file);
   }, [uploadFile]);
 
+  // ── Delete resume ──
+  const handleDeleteResume = useCallback(
+    async (e: React.MouseEvent, resumeId: string) => {
+      e.stopPropagation();
+      if (!confirm("Remove this resume?")) return;
+      setError("");
+      setSuccess("");
+      try {
+        await deleteResume(resumeId);
+        setResumes((prev) => prev.filter((r) => r.id !== resumeId));
+        if (selectedResumeId === resumeId) {
+          setSelectedResumeId("");
+          setMatchResult(null);
+        }
+        setSuccess("Resume removed.");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to delete.");
+      }
+    },
+    [selectedResumeId],
+  );
+
   const handleSelectRecommended = (jobId: string) => {
     setSelectedJobId(jobId);
     setMatchResult(null);
@@ -225,6 +343,15 @@ export default function DashboardPage() {
 
   // ── Derived ──
   const canMatch = !!selectedResumeId && !!selectedJobId && !matchLoading;
+  const selectedResume = resumes.find((r) => r.id === selectedResumeId);
+  const selectedJob = jobs.find((j) => j.id === selectedJobId);
+  const filteredJobs = jobSearch.trim()
+    ? jobs.filter(
+        (j) =>
+          (j.title ?? "").toLowerCase().includes(jobSearch.toLowerCase()) ||
+          (j.company ?? "").toLowerCase().includes(jobSearch.toLowerCase()),
+      )
+    : jobs;
 
   // ── Render ──
   return (
@@ -309,9 +436,14 @@ export default function DashboardPage() {
               />
 
               {uploading ? (
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm text-muted">Uploading resume…</p>
+                  <span
+                    className="block text-sm text-muted transition-all duration-300"
+                    key={uploadMsgIndex}
+                  >
+                    {UPLOAD_MESSAGES[uploadMsgIndex]}
+                  </span>
                 </div>
               ) : dragOver ? (
                 <div className="flex flex-col items-center gap-2">
@@ -335,24 +467,45 @@ export default function DashboardPage() {
               <div className="mt-4 space-y-2">
                 <p className="text-xs font-medium text-muted uppercase tracking-wider">Uploaded resumes</p>
                 {resumes.map((r) => (
-                  <button
+                  <div
                     key={r.id}
-                    onClick={() => setSelectedResumeId(r.id)}
-                    className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-all duration-150 cursor-pointer ${
+                    className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-all duration-150 ${
                       selectedResumeId === r.id
                         ? "border-primary bg-primary/5 shadow-glow"
                         : "border-border bg-transparent hover:bg-card-hover"
                     }`}
                   >
-                    <FileText className={`h-5 w-5 shrink-0 ${selectedResumeId === r.id ? "text-primary" : "text-muted"}`} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-foreground">{r.file_name}</p>
-                      <p className="text-xs text-muted">
-                        {formatDate(r.created_at)} &middot; {(r.file_size / 1024).toFixed(1)} KB
-                      </p>
-                    </div>
-                    {selectedResumeId === r.id && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
-                  </button>
+                    <button
+                      onClick={() => setSelectedResumeId(r.id)}
+                      className="flex flex-1 items-center gap-3 min-w-0 text-left cursor-pointer"
+                    >
+                      <FileText
+                        className={`h-5 w-5 shrink-0 ${
+                          selectedResumeId === r.id ? "text-primary" : "text-muted"
+                        }`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-foreground">
+                          {r.file_name}
+                        </p>
+                        <p className="text-xs text-muted">
+                          {formatDate(r.created_at)} &middot; {(r.file_size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                      {selectedResumeId === r.id && (
+                        <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                      )}
+                    </button>
+                    {/* Remove button */}
+                    <button
+                      onClick={(e) => handleDeleteResume(e, r.id)}
+                      className="shrink-0 rounded-md p-2 text-muted hover:text-destructive hover:bg-error-bg transition-all duration-150 cursor-pointer"
+                      title="Remove resume"
+                      aria-label={`Remove ${r.file_name}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -372,12 +525,35 @@ export default function DashboardPage() {
               </button>
             </div>
 
+            {/* Job search filter */}
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+              <input
+                value={jobSearch}
+                onChange={(e) => setJobSearch(e.target.value)}
+                className="input-field pl-9 pr-8 text-sm"
+                placeholder="Search saved job descriptions…"
+                aria-label="Search job descriptions"
+              />
+              {jobSearch && (
+                <button
+                  onClick={() => setJobSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground cursor-pointer"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
             {/* Job form */}
             {showJobForm && (
               <form onSubmit={handleSaveJob} className="mb-4 space-y-3 rounded-lg bg-muted-bg/50 p-4 border border-border">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-muted">Job title (optional)</label>
+                    <label className="mb-1 block text-xs font-medium text-muted">
+                      Job title <span className="opacity-50">(optional)</span>
+                    </label>
                     <input
                       value={jobTitle}
                       onChange={(e) => setJobTitle(e.target.value)}
@@ -386,7 +562,9 @@ export default function DashboardPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-muted">Company (optional)</label>
+                    <label className="mb-1 block text-xs font-medium text-muted">
+                      Company <span className="opacity-50">(optional)</span>
+                    </label>
                     <input
                       value={jobCompany}
                       onChange={(e) => setJobCompany(e.target.value)}
@@ -400,21 +578,28 @@ export default function DashboardPage() {
                   <textarea
                     value={jobDesc}
                     onChange={(e) => setJobDesc(e.target.value)}
-                    className="textarea-field text-sm"
+                    className="input-field textarea-field text-sm"
                     rows={6}
                     placeholder="Paste the full job description here…"
                     required
                   />
                 </div>
                 <div className="flex justify-end">
-                  <button type="submit" disabled={jobSaving || !jobDesc.trim()} className="btn-primary text-xs">
+                  <button
+                    type="submit"
+                    disabled={jobSaving || !jobDesc.trim()}
+                    className="btn-primary text-xs min-h-[44px]"
+                  >
                     {jobSaving ? (
                       <span className="flex items-center gap-2">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         Saving…
                       </span>
                     ) : (
-                      "Save job description"
+                      <span className="flex items-center gap-2">
+                        <Plus className="h-3.5 w-3.5" />
+                        Save job description
+                      </span>
                     )}
                   </button>
                 </div>
@@ -425,54 +610,76 @@ export default function DashboardPage() {
             {jobs.length === 0 && !showJobForm ? (
               <div className="flex flex-col items-center gap-2 py-8 text-muted">
                 <Briefcase className="h-8 w-8 opacity-40" />
-                <p className="text-sm">No job descriptions yet.</p>
-                <p className="text-xs opacity-60">Add a new job description to start matching.</p>
+                <p className="text-sm font-medium">No job descriptions yet.</p>
+                <p className="text-xs opacity-60">
+                  Click &ldquo;+ New&rdquo; above to add your first job description.
+                </p>
+              </div>
+            ) : filteredJobs.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-6 text-muted">
+                <Search className="h-6 w-6 opacity-40" />
+                <p className="text-sm">No jobs match &ldquo;{jobSearch}&rdquo;</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {jobs.map((j) => (
-                  <button
-                    key={j.id}
-                    onClick={() => setSelectedJobId(j.id)}
-                    className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-all duration-150 cursor-pointer ${
-                      selectedJobId === j.id
-                        ? "border-primary bg-primary/5 shadow-glow"
-                        : "border-border bg-transparent hover:bg-card-hover"
-                    }`}
-                  >
-                    <Briefcase className={`h-5 w-5 shrink-0 ${selectedJobId === j.id ? "text-primary" : "text-muted"}`} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-foreground">
-                        {j.title || "Untitled position"}
-                        {j.company ? <span className="text-muted"> &middot; {j.company}</span> : null}
-                      </p>
-                      <p className="text-xs text-muted">{formatDate(j.created_at)}</p>
-                    </div>
-                    {selectedJobId === j.id && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
-                  </button>
-                ))}
-              </div>
+              !showJobForm && (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {filteredJobs.map((j) => (
+                    <button
+                      key={j.id}
+                      onClick={() => {
+                        setSelectedJobId(j.id);
+                        setMatchResult(null);
+                      }}
+                      className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-all duration-150 cursor-pointer ${
+                        selectedJobId === j.id
+                          ? "border-primary bg-primary/5 shadow-glow"
+                          : "border-border bg-transparent hover:bg-card-hover"
+                      }`}
+                    >
+                      <Briefcase
+                        className={`h-5 w-5 shrink-0 ${
+                          selectedJobId === j.id ? "text-primary" : "text-muted"
+                        }`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-foreground">
+                          {j.title || "Untitled position"}
+                          {j.company ? (
+                            <span className="text-muted"> &middot; {j.company}</span>
+                          ) : null}
+                        </p>
+                        <p className="text-xs text-muted">{formatDate(j.created_at)}</p>
+                      </div>
+                      {selectedJobId === j.id && (
+                        <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )
             )}
           </section>
 
           {/* ════════════════════════════════════ */}
-          {/* SECTION 3 — Run Match               */}
+          {/* SECTION 3 — Match Now (CTA)         */}
           {/* ════════════════════════════════════ */}
           <div className="flex flex-col items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-6 shadow-glow">
             <div className="flex items-center gap-3">
               <Target className="h-6 w-6 text-primary" />
               <p className="text-sm font-medium text-foreground">
                 {selectedResumeId && selectedJobId
-                  ? "Ready — click below to run the match!"
-                  : !selectedResumeId
-                    ? "Select a resume above"
-                    : "Select a job description above"}
+                  ? "Ready to go — click below to see your match!"
+                  : !selectedResumeId && !selectedJobId
+                    ? "Upload a resume and select a job to get started"
+                    : !selectedResumeId
+                      ? "Upload a resume first"
+                      : "Select a job description above"}
               </p>
             </div>
             <button
               onClick={handleRunMatch}
               disabled={!canMatch}
-              className="btn-primary text-base px-8 py-3"
+              className="btn-primary text-base px-10 py-3 min-h-[52px]"
             >
               {matchLoading ? (
                 <span className="flex items-center gap-2">
@@ -482,7 +689,7 @@ export default function DashboardPage() {
               ) : (
                 <span className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5" />
-                  Run Match
+                  Match Now
                 </span>
               )}
             </button>
@@ -491,7 +698,7 @@ export default function DashboardPage() {
           {/* ════════════════════════════════════ */}
           {/* SECTION 4 — Recommended for You    */}
           {/* ════════════════════════════════════ */}
-          {selectedResumeId && (
+          {selectedResumeId && !matchResult && (
             <section className="card-base">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="h-5 w-5 text-primary" />
@@ -607,24 +814,33 @@ function MatchResultsSection({ result }: { result: MatchResult }) {
       </button>
 
       {expanded && (
-        <div className="mt-4 space-y-5">
-          {/* Score ring */}
-          <div className="flex flex-col items-center gap-1">
-            <div
-              className={`badge-score text-lg px-5 py-2 ${scoreColor(result.matchScore)}`}
-            >
-              {result.matchScore}% Match
+        <div className="mt-4 space-y-6">
+          {/* ═══ Score ring + summary ═══ */}
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
+            <ScoreRing score={result.matchScore} />
+            <div className="flex-1 space-y-2 text-center sm:text-left">
+              <p className="text-lg font-bold text-foreground">
+                {result.matchScore >= 75
+                  ? "Strong Match!"
+                  : result.matchScore >= 40
+                    ? "Moderate Match"
+                    : "Low Match"}
+              </p>
+              {result.summary && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <p className="text-sm text-foreground leading-relaxed">{result.summary}</p>
+                </div>
+              )}
             </div>
-            <p className="text-xs text-muted">{result.summary}</p>
           </div>
 
-          {/* Skills grid */}
+          {/* ═══ Skills grid ═══ */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Matched */}
             <div className="rounded-lg bg-success-bg border border-success/20 p-4">
               <h3 className="flex items-center gap-1.5 text-sm font-semibold text-success mb-3">
                 <CheckCircle2 className="h-4 w-4" />
-                Matched Skills ({result.matchedSkills.length})
+                Skills You Have ({result.matchedSkills.length})
               </h3>
               {result.matchedSkills.length === 0 ? (
                 <p className="text-xs text-muted">No matched skills found.</p>
@@ -646,7 +862,7 @@ function MatchResultsSection({ result }: { result: MatchResult }) {
             <div className="rounded-lg bg-warning-bg border border-warning/20 p-4">
               <h3 className="flex items-center gap-1.5 text-sm font-semibold text-warning mb-3">
                 <XCircle className="h-4 w-4" />
-                Missing Skills ({result.missingSkills.length})
+                Skills You&apos;re Missing ({result.missingSkills.length})
               </h3>
               {result.missingSkills.length === 0 ? (
                 <p className="text-xs text-muted">No missing skills — perfect match!</p>
@@ -665,19 +881,21 @@ function MatchResultsSection({ result }: { result: MatchResult }) {
             </div>
           </div>
 
-          {/* Recommendations */}
-          <div className="rounded-lg border border-border bg-muted-bg/50 p-4">
-            <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground mb-2">
-              <Lightbulb className="h-4 w-4 text-primary" />
-              Recommendations
-            </h3>
-            <p className="text-sm text-muted leading-relaxed">{result.summary || "No recommendations available."}</p>
-          </div>
+          {/* ═══ Recommendations ═══ */}
+          {result.summary && (
+            <div className="rounded-lg border border-border bg-muted-bg/50 p-4">
+              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground mb-2">
+                <Lightbulb className="h-4 w-4 text-primary" />
+                Recommendations
+              </h3>
+              <p className="text-sm text-muted leading-relaxed">{result.summary}</p>
+            </div>
+          )}
 
-          {/* Meta */}
+          {/* ═══ Meta ═══ */}
           <div className="flex items-center gap-1.5 text-xs text-muted">
             <Clock className="h-3.5 w-3.5" />
-            Analysed {formatDate(result.created_at)}
+            Analysed {result.created_at ? formatDate(result.created_at) : "just now"}
           </div>
         </div>
       )}

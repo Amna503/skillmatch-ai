@@ -105,7 +105,7 @@ export async function uploadResume(file: File): Promise<ResumeUploadResult> {
  */
 export async function listResumes() {
   const headers = await authHeaders();
-  const res = await fetch(functionUrl("match-history"), {
+  const res = await fetch(functionUrl("match-history") + "?mode=resumes", {
     method: "GET",
     headers,
   });
@@ -113,6 +113,23 @@ export async function listResumes() {
   const body = await res.json();
   if (!res.ok) throw new Error(body.error || "Failed to fetch resumes.");
   return body.resumes;
+}
+
+export async function deleteResume(resumeId: string): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
+
+  const res = await fetch(functionUrl("delete-resume"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ resume_id: resumeId }),
+  });
+
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error || "Failed to delete resume.");
 }
 
 // ============================================================
