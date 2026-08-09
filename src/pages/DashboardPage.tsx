@@ -16,6 +16,7 @@ function formatDate(iso: string) {
 }
 const UPLOAD_MESSAGES = ["Reading your resume…", "Extracting text…", "Analyzing skills…", "Almost done…"];
 
+/* ── Score ring SVG ── */
 function ScoreRing({ score }: { score: number }) {
   const r = 56, c = 2 * Math.PI * r, o = c - (Math.min(score, 100) / 100) * c;
   const ring = score >= 75 ? "stroke-[var(--color-success)]" : score >= 40 ? "stroke-[var(--color-warning)]" : "stroke-[var(--color-destructive)]";
@@ -30,6 +31,8 @@ function ScoreRing({ score }: { score: number }) {
     </div>
   );
 }
+
+/* ── Trust badge ── */
 function TrustBadge() {
   return (
     <span className="pill bg-success/10 text-success border border-success/20 w-fit">
@@ -41,84 +44,236 @@ function TrustBadge() {
     </span>
   );
 }
-const handleDeleteResume = useCallback(async (e: React.MouseEvent, rid: string) => {
-  e.stopPropagation(); if (!confirm("Remove this resume?")) return;
-  setError(""); setSuccess("");
-  try {
-    await deleteResume(rid); setResumes((p) => p.filter((r) => r.id !== rid));
-    if (selectedResumeId === rid) { setSelectedResumeId(""); setMatchResult(null); }
-    setSuccess("Resume removed.");
-  } catch (err) { setError(err instanceof Error ? err.message : "Failed to delete."); }
-}, [selectedResumeId]);
 
-const handleSelectRecommended = (jid: string) => { setSelectedJobId(jid); setMatchResult(null); };
+/* ── MatchResultsSection ── */
+function MatchResultsSection({ result }: { result: MatchResult }) {
+  const [expanded, setExpanded] = useState(true);
+  return (
+    <section className="card-base !border-primary/20 !shadow-glow">
+      <button onClick={() => setExpanded(!expanded)} className="flex w-full items-center justify-between cursor-pointer">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+          <Sparkles className="h-5 w-5 text-primary" /> Match Results
+        </h2>
+        {expanded ? <ChevronUp className="h-5 w-5 text-muted" /> : <ChevronDown className="h-5 w-5 text-muted" />}
+      </button>
+      {expanded && (
+        <div className="mt-6 space-y-6">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
+            <ScoreRing score={result.matchScore} />
+            <div className="flex-1 space-y-3 text-center sm:text-left">
+              <p className="text-xl font-bold text-foreground">
+                {result.matchScore >= 75 ? "Strong Match!" : result.matchScore >= 40 ? "Moderate Match" : "Low Match"}
+              </p>
+              {result.summary && (
+                <div className="rounded-xl border border-primary/15 bg-primary/5 p-4">
+                  <p className="text-sm text-foreground leading-relaxed">{result.summary}</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="rounded-xl bg-success-bg border border-success/20 p-4">
+              <h3 className="flex items-center gap-1.5 text-sm font-bold text-success mb-3">
+                <CheckCircle2 className="h-4 w-4" /> Skills You Have ({result.matchedSkills.length})
+              </h3>
+              {result.matchedSkills.length === 0 ? (
+                <p className="text-xs text-muted">No matched skills found.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {result.matchedSkills.map((s) => (
+                    <span key={s} className="pill bg-success/15 text-success border border-success/20">{s}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="rounded-xl bg-warning-bg border border-warning/20 p-4">
+              <h3 className="flex items-center gap-1.5 text-sm font-bold text-warning mb-3">
+                <XCircle className="h-4 w-4" /> Skills You&apos;re Missing ({result.missingSkills.length})
+              </h3>
+              {result.missingSkills.length === 0 ? (
+                <p className="text-xs text-muted">No missing skills — perfect match!</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {result.missingSkills.map((s) => (
+                    <span key={s} className="pill bg-warning/15 text-warning border border-warning/20">{s}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          {result.summary && (
+            <div className="rounded-xl border border-border bg-card-hover/50 p-4">
+              <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground mb-2">
+                <Lightbulb className="h-4 w-4 text-primary" /> Recommendations
+              </h3>
+              <p className="text-sm text-muted leading-relaxed">{result.summary}</p>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 text-xs text-muted">
+            <Clock className="h-3.5 w-3.5" />
+            Analysed {result.created_at ? formatDate(result.created_at) : "just now"}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
 
-const handleFetchUrl = async () => {
-  if (!jobUrl.trim()) return; setError(""); setUrlLoading(true);
-  try { const r = await fetchJobFromUrl(jobUrl.trim()); setExtractedText(r.text); setExtractedTitle(r.title || ""); setShowExtractedPreview(true); }
-  catch (err) { setError(err instanceof Error ? err.message : "Failed to fetch job from URL."); }
-  finally { setUrlLoading(false); }
-};
+type JobInputMode = "text" | "url" | "image";
 
-const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const f = e.target.files?.[0]; if (!f) return;
-  setImageFile(f); setImagePreviewUrl(URL.createObjectURL(f)); setShowExtractedPreview(false);
-};
+/* ═══════════════════════════════════════════════
+   DashboardPage — main component
+   ═══════════════════════════════════════════════ */
+export default function DashboardPage() {
+  const [resumes, setResumes] = useState<ResumeUploadResult[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadMsgIndex, setUploadMsgIndex] = useState(0);
+  const [dragOver, setDragOver] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [jobs, setJobs] = useState<JobDescription[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState("");
+  const [jobInputMode, setJobInputMode] = useState<JobInputMode>("text");
+  const [jobTitle, setJobTitle] = useState("");
+  const [jobCompany, setJobCompany] = useState("");
+  const [jobDesc, setJobDesc] = useState("");
+  const [jobUrl, setJobUrl] = useState("");
+  const [jobSearch, setJobSearch] = useState("");
+  const [jobSaving, setJobSaving] = useState(false);
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [showJobForm, setShowJobForm] = useState(false);
+  const [showExtractedPreview, setShowExtractedPreview] = useState(false);
+  const [extractedText, setExtractedText] = useState("");
+  const [extractedTitle, setExtractedTitle] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
+  const [matchLoading, setMatchLoading] = useState(false);
+  const [recommendedJobs, setRecommendedJobs] = useState<RecommendedJob[]>([]);
+  const [recommending, setRecommending] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadTimerRef = useRef<ReturnType<typeof setInterval>>();
 
-const handleExtractFromImage = async () => {
-  if (!imageFile) return; setError(""); setImageLoading(true);
-  try { const r = await extractJobFromImage(imageFile); setExtractedText(r.text); setExtractedTitle(r.title || ""); setShowExtractedPreview(true); }
-  catch (err) { setError(err instanceof Error ? err.message : "Failed to extract text from image."); }
-  finally { setImageLoading(false); }
-};
+  const canMatch = !!selectedResumeId && !!selectedJobId && !matchLoading;
+  const filteredJobs = jobSearch.trim()
+    ? jobs.filter((j) => (j.title ?? "").toLowerCase().includes(jobSearch.toLowerCase()) || (j.company ?? "").toLowerCase().includes(jobSearch.toLowerCase()))
+    : jobs;
 
-const handleSaveExtracted = async () => {
-  if (!extractedText.trim()) return; setError(""); setSuccess(""); setJobSaving(true);
-  try {
-    const job = await createJobDescription({ title: extractedTitle.trim() || undefined, description_text: extractedText });
-    setJobs((p) => [job, ...p]); setSelectedJobId(job.id); setShowExtractedPreview(false);
-    setExtractedText(""); setExtractedTitle(""); setJobUrl(""); setImageFile(null);
-    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); setImagePreviewUrl(null);
-    setSuccess("Job description saved!");
-  } catch (err) { setError(err instanceof Error ? err.message : "Failed to save job."); }
-  finally { setJobSaving(false); }
-};
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([listResumes(), listJobDescriptions()]).then(([res, jbs]) => {
+      if (cancelled) return; setResumes(res); setJobs(jbs);
+    }).catch((err) => {
+      if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load data.");
+    }).finally(() => { if (!cancelled) setInitialLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
-const handleSaveJob = async (e: React.FormEvent) => {
-  e.preventDefault(); if (!jobDesc.trim()) return;
-  setError(""); setSuccess(""); setJobSaving(true);
-  try {
-    const job = await createJobDescription({ title: jobTitle.trim() || undefined, company: jobCompany.trim() || undefined, description_text: jobDesc });
-    setJobs((p) => [job, ...p]); setSelectedJobId(job.id);
-    setJobTitle(""); setJobCompany(""); setJobDesc(""); setShowJobForm(false);
-    setSuccess("Job description saved!");
-  } catch (err) { setError(err instanceof Error ? err.message : "Failed to save job."); }
-  finally { setJobSaving(false); }
-};
+  useEffect(() => {
+    if (!selectedResumeId) { setRecommendedJobs([]); return; }
+    setRecommending(true);
+    getRecommendedJobs(selectedResumeId).then(setRecommendedJobs).catch(() => {}).finally(() => setRecommending(false));
+  }, [selectedResumeId]);
 
-const handleRunMatch = async () => {
-  if (!selectedResumeId || !selectedJobId) return;
-  setError(""); setSuccess(""); setMatchResult(null); setMatchLoading(true);
-  try { const r = await runMatch(selectedResumeId, selectedJobId); setMatchResult(r); }
-  catch (err) { setError(err instanceof Error ? err.message : "Match failed."); }
-  finally { setMatchLoading(false); }
-};
+  useEffect(() => {
+    if (!uploading) { clearInterval(uploadTimerRef.current); return; }
+    uploadTimerRef.current = setInterval(() => setUploadMsgIndex((i) => (i + 1) % UPLOAD_MESSAGES.length), 2500);
+    return () => clearInterval(uploadTimerRef.current);
+  }, [uploading]);
 
-const canMatch = !!selectedResumeId && !!selectedJobId && !matchLoading;
-const filteredJobs = jobSearch.trim()
-  ? jobs.filter((j) => (j.title ?? "").toLowerCase().includes(jobSearch.toLowerCase()) || (j.company ?? "").toLowerCase().includes(jobSearch.toLowerCase()))
-  : jobs;
+  useEffect(() => () => { if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); }, [imagePreviewUrl]);
+
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setError(""); setSuccess(""); setUploading(true); setUploadMsgIndex(0);
+    try {
+      const result = await uploadResume(file);
+      setResumes((p) => [result, ...p]); setSelectedResumeId(result.id); setSuccess("Resume uploaded!");
+    } catch (err) { setError(err instanceof Error ? err.message : "Upload failed."); }
+    finally { setUploading(false); if (fileInputRef.current) fileInputRef.current.value = ""; }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setDragOver(true); }, []);
+  const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); setDragOver(false); }, []);
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); setDragOver(false);
+    const file = e.dataTransfer.files?.[0]; if (!file) return;
+    setError(""); setSuccess(""); setUploading(true); setUploadMsgIndex(0);
+    uploadResume(file).then((result) => { setResumes((p) => [result, ...p]); setSelectedResumeId(result.id); setSuccess("Resume uploaded!"); })
+      .catch((err) => { setError(err instanceof Error ? err.message : "Upload failed."); }).finally(() => setUploading(false));
+  }, []);
+  const handleDeleteResume = useCallback(async (e: React.MouseEvent, rid: string) => {
+    e.stopPropagation(); if (!confirm("Remove this resume?")) return;
+    setError(""); setSuccess("");
+    try {
+      await deleteResume(rid); setResumes((p) => p.filter((r) => r.id !== rid));
+      if (selectedResumeId === rid) { setSelectedResumeId(""); setMatchResult(null); }
+      setSuccess("Resume removed.");
+    } catch (err) { setError(err instanceof Error ? err.message : "Failed to delete."); }
+  }, [selectedResumeId]);
+
+  const handleSelectRecommended = (jid: string) => { setSelectedJobId(jid); setMatchResult(null); };
+
+  const handleFetchUrl = async () => {
+    if (!jobUrl.trim()) return; setError(""); setUrlLoading(true);
+    try { const r = await fetchJobFromUrl(jobUrl.trim()); setExtractedText(r.text); setExtractedTitle(r.title || ""); setShowExtractedPreview(true); }
+    catch (err) { setError(err instanceof Error ? err.message : "Failed to fetch job from URL."); }
+    finally { setUrlLoading(false); }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    setImageFile(f); if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImagePreviewUrl(URL.createObjectURL(f)); setShowExtractedPreview(false);
+  };
+
+  const handleExtractFromImage = async () => {
+    if (!imageFile) return; setError(""); setImageLoading(true);
+    try { const r = await extractJobFromImage(imageFile); setExtractedText(r.text); setExtractedTitle(r.title || ""); setShowExtractedPreview(true); }
+    catch (err) { setError(err instanceof Error ? err.message : "Failed to extract text from image."); }
+    finally { setImageLoading(false); }
+  };
+
+  const handleSaveExtracted = async () => {
+    if (!extractedText.trim()) return; setError(""); setSuccess(""); setJobSaving(true);
+    try {
+      const job = await createJobDescription({ title: extractedTitle.trim() || undefined, description_text: extractedText });
+      setJobs((p) => [job, ...p]); setSelectedJobId(job.id); setShowExtractedPreview(false);
+      setExtractedText(""); setExtractedTitle(""); setJobUrl(""); setImageFile(null);
+      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); setImagePreviewUrl(null);
+      setSuccess("Job description saved!");
+    } catch (err) { setError(err instanceof Error ? err.message : "Failed to save job."); }
+    finally { setJobSaving(false); }
+  };
+
+  const handleSaveJob = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!jobDesc.trim()) return; setError(""); setSuccess(""); setJobSaving(true);
+    try {
+      const job = await createJobDescription({ title: jobTitle.trim() || undefined, company: jobCompany.trim() || undefined, description_text: jobDesc });
+      setJobs((p) => [job, ...p]); setSelectedJobId(job.id);
+      setJobTitle(""); setJobCompany(""); setJobDesc(""); setShowJobForm(false);
+      setSuccess("Job description saved!");
+    } catch (err) { setError(err instanceof Error ? err.message : "Failed to save job."); }
+    finally { setJobSaving(false); }
+  };
+
+  const handleRunMatch = async () => {
+    if (!selectedResumeId || !selectedJobId) return; setError(""); setSuccess(""); setMatchResult(null); setMatchLoading(true);
+    try { const r = await runMatch(selectedResumeId, selectedJobId); setMatchResult(r); }
+    catch (err) { setError(err instanceof Error ? err.message : "Match failed."); }
+    finally { setMatchLoading(false); }
+  };
+
+  /* ══ RENDER ══ */
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
-      {/* HERO */}
       <div className="text-center sm:text-left">
         <div>
-          <h1 className="text-3xl font-extrabold text-foreground font-heading sm:text-4xl tracking-tight">
-            Resume &amp; Job Matcher
-          </h1>
-          <p className="mt-2 text-base text-muted max-w-xl">
-            Upload your resume, paste or snap a job description — AI instantly tells you how well you fit.
-          </p>
+          <h1 className="text-3xl font-extrabold text-foreground font-heading sm:text-4xl tracking-tight">Resume &amp; Job Matcher</h1>
+          <p className="mt-2 text-base text-muted max-w-xl">Upload your resume, paste or snap a job description — AI instantly tells you how well you fit.</p>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3 justify-center sm:justify-start">
           <TrustBadge />
@@ -127,7 +282,6 @@ const filteredJobs = jobSearch.trim()
         </div>
       </div>
 
-      {/* Feedback toasts */}
       {error && (
         <div className="flex items-center gap-2.5 rounded-2xl bg-error-bg border border-destructive/30 px-5 py-3.5 text-sm text-destructive">
           <AlertCircle className="h-5 w-5 shrink-0" /><span className="flex-1">{error}</span>
@@ -142,14 +296,10 @@ const filteredJobs = jobSearch.trim()
       )}
 
       {initialLoading ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="skeleton h-72 w-full" /><div className="skeleton h-72 w-full" />
-        </div>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2"><div className="skeleton h-72 w-full" /><div className="skeleton h-72 w-full" /></div>
       ) : (
         <>
-          {/* TWO-PANEL INPUT */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-
             {/* LEFT: RESUME PANEL */}
             <section className="card-base !p-0 overflow-hidden">
               <div className="border-b border-border px-6 py-4 flex items-center justify-between">
@@ -164,7 +314,6 @@ const filteredJobs = jobSearch.trim()
                   className={`relative rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-200 ${
                     dragOver ? "border-primary bg-primary/5 scale-[1.02] shadow-glow" : "border-border hover:border-primary/30 hover:bg-card-hover/50"
                   } ${uploading ? "pointer-events-none opacity-60" : ""}`}>
-                  <input type="file" accept=".pdf,.docx,.doc,.txt" onChange={handleFileUpload} className="hidden" disabled={uploading} />
                   {uploading ? (
                     <div className="flex flex-col items-center gap-3">
                       <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -210,6 +359,7 @@ const filteredJobs = jobSearch.trim()
                 )}
               </div>
             </section>
+
             {/* RIGHT: JOB DESCRIPTION PANEL */}
             <section className="card-base !p-0 overflow-hidden">
               <div className="border-b border-border px-6 py-4 flex items-center justify-between">
@@ -219,7 +369,6 @@ const filteredJobs = jobSearch.trim()
                 )}
               </div>
               <div className="p-6 space-y-4">
-                {/* Mode tabs */}
                 {!showExtractedPreview && !showJobForm && (
                   <div className="flex rounded-xl border border-border p-1 bg-card-hover/50 gap-0.5">
                     {([{ m: "text" as JobInputMode, l: "Paste", i: ScrollText },
@@ -235,24 +384,18 @@ const filteredJobs = jobSearch.trim()
                   </div>
                 )}
 
-                {/* MODE 1: Paste text */}
                 {jobInputMode === "text" && !showExtractedPreview && !showJobForm && (
                   <div className="space-y-3">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted">Job title (optional)</label>
-                      <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="input-field text-sm" placeholder="e.g. Senior Frontend Engineer" />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted">Job description</label>
-                      <textarea value={jobDesc} onChange={(e) => setJobDesc(e.target.value)} className="input-field textarea-field text-sm" rows={6} placeholder="Paste the full job description here…" />
-                    </div>
+                    <div><label className="mb-1.5 block text-xs font-medium text-muted">Job title (optional)</label>
+                      <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="input-field text-sm" placeholder="e.g. Senior Frontend Engineer" /></div>
+                    <div><label className="mb-1.5 block text-xs font-medium text-muted">Job description</label>
+                      <textarea value={jobDesc} onChange={(e) => setJobDesc(e.target.value)} className="input-field textarea-field text-sm" rows={6} placeholder="Paste the full job description here…" /></div>
                     <button onClick={handleSaveJob} disabled={jobSaving || !jobDesc.trim() || jobDesc.trim().length < 20} className="btn-primary w-full">
                       {jobSaving ? <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Saving…</span> : <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Save &amp; Select</span>}
                     </button>
                   </div>
                 )}
 
-                {/* MODE 2: URL */}
                 {jobInputMode === "url" && !showExtractedPreview && !showJobForm && (
                   <div className="space-y-3">
                     <p className="text-xs text-muted">Paste a job posting URL to auto-extract the description.</p>
@@ -263,7 +406,6 @@ const filteredJobs = jobSearch.trim()
                   </div>
                 )}
 
-                {/* MODE 3: Image */}
                 {jobInputMode === "image" && !showExtractedPreview && !showJobForm && (
                   <div className="space-y-3">
                     <p className="text-xs text-muted">Upload a screenshot of the job posting. AI will extract the text.</p>
@@ -281,31 +423,23 @@ const filteredJobs = jobSearch.trim()
                     ) : (
                       <label className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border p-8 text-center hover:border-primary/30 hover:bg-card-hover/50 transition-all duration-200 cursor-pointer">
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/5"><Image className="h-6 w-6 text-muted opacity-50" /></div>
-                        <div>
-                          <p className="text-sm font-semibold text-muted"><span className="text-primary underline decoration-primary/30 underline-offset-2">Browse</span> or drop an image</p>
-                          <p className="text-xs text-muted opacity-60 mt-1">PNG, JPG, or WebP</p>
-                        </div>
+                        <div><p className="text-sm font-semibold text-muted"><span className="text-primary underline decoration-primary/30 underline-offset-2">Browse</span> or drop an image</p>
+                          <p className="text-xs text-muted opacity-60 mt-1">PNG, JPG, or WebP</p></div>
                         <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageSelect} className="hidden" />
                       </label>
                     )}
                   </div>
                 )}
 
-                {/* Extracted text preview (URL & Image) */}
                 {showExtractedPreview && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 rounded-xl bg-success-bg border border-success/20 px-4 py-2.5 text-sm text-success">
-                      <CheckCircle2 className="h-4 w-4 shrink-0" />
-                      <span>Text extracted. Review and edit below before saving.</span>
+                      <CheckCircle2 className="h-4 w-4 shrink-0" /><span>Text extracted. Review and edit below before saving.</span>
                     </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted">Job title</label>
-                      <input value={extractedTitle} onChange={(e) => setExtractedTitle(e.target.value)} className="input-field text-sm" placeholder="Extracted job title" />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted">Job description</label>
-                      <textarea value={extractedText} onChange={(e) => setExtractedText(e.target.value)} className="input-field textarea-field text-sm" rows={6} placeholder="Extracted text will appear here…" />
-                    </div>
+                    <div><label className="mb-1.5 block text-xs font-medium text-muted">Job title</label>
+                      <input value={extractedTitle} onChange={(e) => setExtractedTitle(e.target.value)} className="input-field text-sm" placeholder="Extracted job title" /></div>
+                    <div><label className="mb-1.5 block text-xs font-medium text-muted">Job description</label>
+                      <textarea value={extractedText} onChange={(e) => setExtractedText(e.target.value)} className="input-field textarea-field text-sm" rows={6} placeholder="Extracted text will appear here…" /></div>
                     <div className="flex gap-2">
                       <button onClick={handleSaveExtracted} disabled={jobSaving || !extractedText.trim()} className="btn-primary flex-1">
                         {jobSaving ? <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Saving…</span> : <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Save &amp; Select</span>}
@@ -315,21 +449,14 @@ const filteredJobs = jobSearch.trim()
                   </div>
                 )}
 
-                {/* Manual job form */}
                 {showJobForm && !showExtractedPreview && (
                   <form onSubmit={handleSaveJob} className="space-y-3">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted">Job title <span className="opacity-50">(optional)</span></label>
-                      <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="input-field text-sm" placeholder="e.g. Senior Frontend Engineer" />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted">Company <span className="opacity-50">(optional)</span></label>
-                      <input value={jobCompany} onChange={(e) => setJobCompany(e.target.value)} className="input-field text-sm" placeholder="e.g. Acme Corp" />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-muted">Job description *</label>
-                      <textarea value={jobDesc} onChange={(e) => setJobDesc(e.target.value)} className="input-field textarea-field text-sm" rows={6} placeholder="Paste the full job description here…" required />
-                    </div>
+                    <div><label className="mb-1.5 block text-xs font-medium text-muted">Job title <span className="opacity-50">(optional)</span></label>
+                      <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="input-field text-sm" placeholder="e.g. Senior Frontend Engineer" /></div>
+                    <div><label className="mb-1.5 block text-xs font-medium text-muted">Company <span className="opacity-50">(optional)</span></label>
+                      <input value={jobCompany} onChange={(e) => setJobCompany(e.target.value)} className="input-field text-sm" placeholder="e.g. Acme Corp" /></div>
+                    <div><label className="mb-1.5 block text-xs font-medium text-muted">Job description *</label>
+                      <textarea value={jobDesc} onChange={(e) => setJobDesc(e.target.value)} className="input-field textarea-field text-sm" rows={6} placeholder="Paste the full job description here…" required /></div>
                     <div className="flex gap-2">
                       <button type="submit" disabled={jobSaving || !jobDesc.trim()} className="btn-primary flex-1">
                         {jobSaving ? <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Saving…</span> : <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Save job description</span>}
@@ -339,7 +466,6 @@ const filteredJobs = jobSearch.trim()
                   </form>
                 )}
 
-                {/* Saved job list */}
                 {!showJobForm && !showExtractedPreview && jobs.length > 0 && (
                   <div className="space-y-2">
                     <div className="relative">
@@ -365,7 +491,6 @@ const filteredJobs = jobSearch.trim()
                   </div>
                 )}
 
-                {/* Empty state */}
                 {!showJobForm && !showExtractedPreview && jobs.length === 0 && (
                   <div className="flex flex-col items-center gap-2 py-6 text-muted">
                     <Briefcase className="h-8 w-8 opacity-40" />
@@ -376,26 +501,22 @@ const filteredJobs = jobSearch.trim()
               </div>
             </section>
           </div>
-          {/* ANALYZE MATCH BUTTON */}
+
           <div className="flex flex-col items-center gap-3 rounded-2xl border border-primary/15 bg-gradient-to-br from-accent-gradient-from/5 to-accent-gradient-to/5 p-8 shadow-glow">
             <div className="flex items-center gap-3">
               <Target className="h-6 w-6 text-primary" />
               <p className="text-sm font-medium text-foreground">
-                {selectedResumeId && selectedJobId
-                  ? "Ready to go — click below to see your match!"
-                  : !selectedResumeId && !selectedJobId
-                    ? "Upload a resume and add a job description to get started"
-                    : !selectedResumeId ? "Upload a resume first" : "Add a job description above"}
+                {selectedResumeId && selectedJobId ? "Ready to go — click below to see your match!"
+                  : !selectedResumeId && !selectedJobId ? "Upload a resume and add a job description to get started"
+                  : !selectedResumeId ? "Upload a resume first" : "Add a job description above"}
               </p>
             </div>
             <button onClick={handleRunMatch} disabled={!canMatch} className="btn-primary text-base px-12 py-4 min-h-[56px] text-lg">
-              {matchLoading
-                ? <span className="flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" /> Matching…</span>
+              {matchLoading ? <span className="flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" /> Matching…</span>
                 : <span className="flex items-center gap-2"><Sparkles className="h-5 w-5" /> Analyze Match</span>}
             </button>
           </div>
 
-          {/* RECOMMENDED JOBS */}
           {selectedResumeId && !matchResult && (
             <section className="card-base">
               <div className="flex items-center gap-2 mb-4">
@@ -409,8 +530,7 @@ const filteredJobs = jobSearch.trim()
                 </div>
               ) : recommendedJobs.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-6 text-muted">
-                  <TrendingUp className="h-8 w-8 opacity-40" />
-                  <p className="text-sm">No recommendations yet.</p>
+                  <TrendingUp className="h-8 w-8 opacity-40" /><p className="text-sm">No recommendations yet.</p>
                   <p className="text-xs opacity-60">Add more job descriptions to get personalized recommendations.</p>
                 </div>
               ) : (
@@ -441,94 +561,9 @@ const filteredJobs = jobSearch.trim()
             </section>
           )}
 
-          {/* MATCH RESULTS */}
           {matchResult && <MatchResultsSection result={matchResult} />}
         </>
       )}
     </div>
-  );
-}
-/* ────────────────────────────────────────────
-   MatchResultsSection
-   ──────────────────────────────────────────── */
-function MatchResultsSection({ result }: { result: MatchResult }) {
-  const [expanded, setExpanded] = useState(true);
-
-  return (
-    <section className="card-base !border-primary/20 !shadow-glow">
-      <button onClick={() => setExpanded(!expanded)} className="flex w-full items-center justify-between cursor-pointer">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-          <Sparkles className="h-5 w-5 text-primary" /> Match Results
-        </h2>
-        {expanded ? <ChevronUp className="h-5 w-5 text-muted" /> : <ChevronDown className="h-5 w-5 text-muted" />}
-      </button>
-
-      {expanded && (
-        <div className="mt-6 space-y-6">
-          {/* Score ring + summary */}
-          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
-            <ScoreRing score={result.matchScore} />
-            <div className="flex-1 space-y-3 text-center sm:text-left">
-              <p className="text-xl font-bold text-foreground">
-                {result.matchScore >= 75 ? "Strong Match!" : result.matchScore >= 40 ? "Moderate Match" : "Low Match"}
-              </p>
-              {result.summary && (
-                <div className="rounded-xl border border-primary/15 bg-primary/5 p-4">
-                  <p className="text-sm text-foreground leading-relaxed">{result.summary}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Skills grid */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="rounded-xl bg-success-bg border border-success/20 p-4">
-              <h3 className="flex items-center gap-1.5 text-sm font-bold text-success mb-3">
-                <CheckCircle2 className="h-4 w-4" /> Skills You Have ({result.matchedSkills.length})
-              </h3>
-              {result.matchedSkills.length === 0 ? (
-                <p className="text-xs text-muted">No matched skills found.</p>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {result.matchedSkills.map((s) => (
-                    <span key={s} className="pill bg-success/15 text-success border border-success/20">{s}</span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="rounded-xl bg-warning-bg border border-warning/20 p-4">
-              <h3 className="flex items-center gap-1.5 text-sm font-bold text-warning mb-3">
-                <XCircle className="h-4 w-4" /> Skills You&apos;re Missing ({result.missingSkills.length})
-              </h3>
-              {result.missingSkills.length === 0 ? (
-                <p className="text-xs text-muted">No missing skills — perfect match!</p>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {result.missingSkills.map((s) => (
-                    <span key={s} className="pill bg-warning/15 text-warning border border-warning/20">{s}</span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Recommendations card */}
-          {result.summary && (
-            <div className="rounded-xl border border-border bg-card-hover/50 p-4">
-              <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground mb-2">
-                <Lightbulb className="h-4 w-4 text-primary" /> Recommendations
-              </h3>
-              <p className="text-sm text-muted leading-relaxed">{result.summary}</p>
-            </div>
-          )}
-
-          {/* Timestamp */}
-          <div className="flex items-center gap-1.5 text-xs text-muted">
-            <Clock className="h-3.5 w-3.5" />
-            Analysed {result.created_at ? formatDate(result.created_at) : "just now"}
-          </div>
-        </div>
-      )}
-    </section>
   );
 }
