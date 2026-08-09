@@ -32,16 +32,6 @@ export interface MatchResult {
   job?: { id: string; title: string | null; company: string | null; created_at: string };
 }
 
-export interface RecommendedJob {
-  id: string;
-  title: string | null;
-  company: string | null;
-  matchScore: number;
-  matchedSkills: string[];
-  missingSkills: string[];
-  created_at: string;
-}
-
 // ============================================================
 // Auth helpers
 // ============================================================
@@ -88,6 +78,10 @@ async function authHeaders(): Promise<Record<string, string>> {
 // Resumes
 // ============================================================
 
+/**
+ * Upload a resume file (PDF, DOCX, or TXT).
+ * Text extraction runs in the background automatically.
+ */
 export async function uploadResume(file: File): Promise<ResumeUploadResult> {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData?.session?.access_token;
@@ -106,6 +100,9 @@ export async function uploadResume(file: File): Promise<ResumeUploadResult> {
   return body.resume;
 }
 
+/**
+ * List all resumes for the current user, including extraction status.
+ */
 export async function listResumes() {
   const headers = await authHeaders();
   const res = await fetch(functionUrl("match-history") + "?mode=resumes", {
@@ -181,44 +178,6 @@ export async function getJobDescription(id: string): Promise<JobDescription> {
 }
 
 // ============================================================
-// URL Job Fetch (new)
-// ============================================================
-
-export async function fetchJobFromUrl(url: string): Promise<{ text: string; title?: string }> {
-  const headers = await authHeaders();
-  const res = await fetch(functionUrl("fetch-job-url"), {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ url }),
-  });
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error || "Failed to fetch job from URL.");
-  return body;
-}
-
-// ============================================================
-// Image Job Extract (new)
-// ============================================================
-
-export async function extractJobFromImage(file: File): Promise<{ text: string; title?: string }> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData?.session?.access_token;
-
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const res = await fetch(functionUrl("extract-job-from-image"), {
-    method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData,
-  });
-
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error || "Failed to extract job from image.");
-  return body;
-}
-
-// ============================================================
 // Matching
 // ============================================================
 
@@ -238,6 +197,16 @@ export async function runMatch(resumeId: string, jobId: string): Promise<MatchRe
 // ============================================================
 // Recommended Jobs
 // ============================================================
+
+export interface RecommendedJob {
+  id: string;
+  title: string | null;
+  company: string | null;
+  matchScore: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+  created_at: string;
+}
 
 export async function getRecommendedJobs(resumeId: string): Promise<RecommendedJob[]> {
   const headers = await authHeaders();
