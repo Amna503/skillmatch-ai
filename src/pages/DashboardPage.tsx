@@ -5,9 +5,11 @@ import {
   createJobDescription,
   listJobDescriptions,
   runMatch,
+  getRecommendedJobs,
   type ResumeUploadResult,
   type JobDescription,
   type MatchResult,
+  type RecommendedJob,
 } from "../lib/api";
 import {
   Upload,
@@ -23,6 +25,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  TrendingUp,
 } from "lucide-react";
 
 /* ────────────────────────────────────────────
@@ -71,6 +74,10 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // Recommended jobs state
+  const [recommendedJobs, setRecommendedJobs] = useState<RecommendedJob[]>([]);
+  const [recommending, setRecommending] = useState(false);
+
   // Skeleton loading for initial data
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -79,6 +86,19 @@ export default function DashboardPage() {
     Promise.all([loadResumes(), loadJobs()]).finally(() => setInitialLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Fetch recommended jobs when resume changes ──
+  useEffect(() => {
+    if (!selectedResumeId) {
+      setRecommendedJobs([]);
+      return;
+    }
+    setRecommending(true);
+    getRecommendedJobs(selectedResumeId)
+      .then(setRecommendedJobs)
+      .catch(() => setRecommendedJobs([]))
+      .finally(() => setRecommending(false));
+  }, [selectedResumeId]);
 
   async function loadResumes() {
     try {
@@ -116,6 +136,11 @@ export default function DashboardPage() {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  };
+
+  const handleSelectRecommended = (jobId: string) => {
+    setSelectedJobId(jobId);
+    setMatchResult(null);
   };
 
   const handleSaveJob = async (e: React.FormEvent) => {
@@ -388,7 +413,95 @@ export default function DashboardPage() {
           </div>
 
           {/* ════════════════════════════════════ */}
-          {/* SECTION 4 — Match Results           */}
+          {/* SECTION 4 — Recommended for You    */}
+          {/* ════════════════════════════════════ */}
+          {selectedResumeId && (
+            <section className="card-base">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Recommended for You</h2>
+                {recommending && <Loader2 className="h-4 w-4 animate-spin text-muted" />}
+              </div>
+
+              {recommending ? (
+                <div className="flex flex-col items-center gap-3 py-8 text-muted">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <p className="text-sm">Finding the best matches…</p>
+                </div>
+              ) : recommendedJobs.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-6 text-muted">
+                  <TrendingUp className="h-8 w-8 opacity-40" />
+                  <p className="text-sm">No recommendations yet.</p>
+                  <p className="text-xs opacity-60">
+                    Add more job descriptions to get personalized recommendations.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recommendedJobs.map((job) => (
+                    <button
+                      key={job.id}
+                      onClick={() => handleSelectRecommended(job.id)}
+                      className={`flex w-full items-center gap-4 rounded-lg border p-4 text-left transition-all duration-150 cursor-pointer ${
+                        selectedJobId === job.id
+                          ? "border-primary bg-primary/5 shadow-glow"
+                          : "border-border bg-transparent hover:bg-card-hover"
+                      }`}
+                    >
+                      {/* Score badge */}
+                      <div className={`shrink-0 flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold ${
+                        job.matchScore >= 70
+                          ? "bg-success/15 text-success"
+                          : job.matchScore >= 40
+                            ? "bg-warning/15 text-warning"
+                            : "bg-error-bg text-destructive"
+                      }`}>
+                        {job.matchScore}%
+                      </div>
+
+                      {/* Details */}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-foreground">
+                          {job.title || "Untitled position"}
+                          {job.company ? <span className="text-muted"> &middot; {job.company}</span> : null}
+                        </p>
+                        <p className="mt-1 text-xs text-muted">
+                          {job.matchedSkills.length} skills match
+                          {job.missingSkills.length > 0
+                            ? ` · ${job.missingSkills.length} to improve`
+                            : ""}
+                        </p>
+                        {job.matchedSkills.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {job.matchedSkills.slice(0, 4).map((s) => (
+                              <span
+                                key={s}
+                                className="inline-flex items-center rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success"
+                              >
+                                {s}
+                              </span>
+                            ))}
+                            {job.matchedSkills.length > 4 && (
+                              <span className="inline-flex items-center text-[10px] text-muted">
+                                +{job.matchedSkills.length - 4} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {selectedJobId === job.id && (
+                        <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* ════════════════════════════════════ */}
+          {/* SECTION 5 — Match Results           */}
           {/* ════════════════════════════════════ */}
           {matchResult && <MatchResultsSection result={matchResult} />}
         </>

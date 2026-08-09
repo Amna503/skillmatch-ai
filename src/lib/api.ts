@@ -178,6 +178,33 @@ export async function runMatch(resumeId: string, jobId: string): Promise<MatchRe
 }
 
 // ============================================================
+// Recommended Jobs
+// ============================================================
+
+export interface RecommendedJob {
+  id: string;
+  title: string | null;
+  company: string | null;
+  matchScore: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+  created_at: string;
+}
+
+export async function getRecommendedJobs(resumeId: string): Promise<RecommendedJob[]> {
+  const headers = await authHeaders();
+  const res = await fetch(functionUrl("recommended-jobs"), {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ resume_id: resumeId }),
+  });
+
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error || "Failed to get recommendations.");
+  return body.recommendations;
+}
+
+// ============================================================
 // Match History
 // ============================================================
 
