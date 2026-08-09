@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   uploadResume,
   listResumes,
-  deleteResume,
   createJobDescription,
   listJobDescriptions,
   runMatch,
@@ -27,9 +26,6 @@ import {
   ChevronUp,
   Clock,
   TrendingUp,
-  Search,
-  Trash2,
-  Plus,
 } from "lucide-react";
 
 /* ────────────────────────────────────────────
@@ -51,75 +47,6 @@ function scoreColor(score: number) {
   return "text-destructive bg-error-bg";
 }
 
-const UPLOAD_MESSAGES = [
-  "Reading your resume…",
-  "Extracting text…",
-  "Analyzing skills…",
-  "Almost done…",
-];
-
-/* ────────────────────────────────────────────
-   Animated Score Ring
-   ──────────────────────────────────────────── */
-function ScoreRing({ score }: { score: number }) {
-  const radius = 56;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (Math.min(score, 100) / 100) * circumference;
-
-  const ringColor =
-    score >= 75
-      ? "stroke-success"
-      : score >= 40
-        ? "stroke-warning"
-        : "stroke-destructive";
-
-  const textColor =
-    score >= 75
-      ? "text-success"
-      : score >= 40
-        ? "text-warning"
-        : "text-destructive";
-
-  return (
-    <div
-      className="relative inline-flex items-center justify-center"
-      role="progressbar"
-      aria-valuenow={score}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-label={`Match score: ${score}%`}
-    >
-      <svg width="140" height="140" className="-rotate-90">
-        {/* Background circle */}
-        <circle
-          cx="70"
-          cy="70"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          className="text-border opacity-30"
-          strokeWidth="10"
-        />
-        {/* Foreground circle */}
-        <circle
-          cx="70"
-          cy="70"
-          r={radius}
-          fill="none"
-          className={`${ringColor} transition-all duration-1000 ease-out`}
-          strokeWidth="10"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-        />
-      </svg>
-      <span className={`absolute text-3xl font-extrabold ${textColor}`}>
-        {score}%
-      </span>
-    </div>
-  );
-}
-
 /* ────────────────────────────────────────────
    DashboardPage
    ──────────────────────────────────────────── */
@@ -134,10 +61,8 @@ export default function DashboardPage() {
 
   // Upload state
   const [uploading, setUploading] = useState(false);
-  const [uploadMsgIndex, setUploadMsgIndex] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const uploadMsgTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Job form state
   const [showJobForm, setShowJobForm] = useState(false);
@@ -145,9 +70,6 @@ export default function DashboardPage() {
   const [jobCompany, setJobCompany] = useState("");
   const [jobDesc, setJobDesc] = useState("");
   const [jobSaving, setJobSaving] = useState(false);
-
-  // Job search
-  const [jobSearch, setJobSearch] = useState("");
 
   // Feedback
   const [error, setError] = useState("");
