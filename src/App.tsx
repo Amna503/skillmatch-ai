@@ -5,11 +5,15 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import DashboardPage from "./pages/DashboardPage";
 import HistoryPage from "./pages/HistoryPage";
+import StatusPage from "./pages/StatusPage";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public status/health check */}
+        <Route path="/status" element={<StatusPage />} />
+
         {/* Public auth routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
