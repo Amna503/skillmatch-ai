@@ -1,9 +1,50 @@
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import AuthGuard from "./components/AuthGuard";
+import Header from "./components/Header";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import DashboardPage from "./pages/DashboardPage";
+import HistoryPage from "./pages/HistoryPage";
+
 export default function App() {
   return (
-    <div className="min-h-screen bg-dotgrid-glow flex items-center justify-center">
-      <p className="text-md text-text-muted tracking-wide select-none">
-        Your app will be here
-      </p>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        {/* Public auth routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+
+        {/* Protected routes */}
+        <Route
+          path="/"
+          element={
+            <AuthGuard>
+              <div className="min-h-screen bg-background">
+                <Header />
+                <main>
+                  <DashboardPage />
+                </main>
+              </div>
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <AuthGuard>
+              <div className="min-h-screen bg-background">
+                <Header />
+                <main>
+                  <HistoryPage />
+                </main>
+              </div>
+            </AuthGuard>
+          }
+        />
+
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
