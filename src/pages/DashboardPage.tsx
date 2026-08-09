@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   uploadResume,
   listResumes,
+  deleteResume,
   createJobDescription,
   listJobDescriptions,
   runMatch,
@@ -26,6 +27,9 @@ import {
   ChevronUp,
   Clock,
   TrendingUp,
+  Search,
+  Trash2,
+  Plus,
 } from "lucide-react";
 
 /* ────────────────────────────────────────────
@@ -47,6 +51,75 @@ function scoreColor(score: number) {
   return "text-destructive bg-error-bg";
 }
 
+const UPLOAD_MESSAGES = [
+  "Reading your resume…",
+  "Extracting text…",
+  "Analyzing skills…",
+  "Almost done…",
+];
+
+/* ────────────────────────────────────────────
+   Animated Score Ring
+   ──────────────────────────────────────────── */
+function ScoreRing({ score }: { score: number }) {
+  const radius = 56;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (Math.min(score, 100) / 100) * circumference;
+
+  const ringColor =
+    score >= 75
+      ? "stroke-success"
+      : score >= 40
+        ? "stroke-warning"
+        : "stroke-destructive";
+
+  const textColor =
+    score >= 75
+      ? "text-success"
+      : score >= 40
+        ? "text-warning"
+        : "text-destructive";
+
+  return (
+    <div
+      className="relative inline-flex items-center justify-center"
+      role="progressbar"
+      aria-valuenow={score}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={`Match score: ${score}%`}
+    >
+      <svg width="140" height="140" className="-rotate-90">
+        {/* Background circle */}
+        <circle
+          cx="70"
+          cy="70"
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          className="text-border opacity-30"
+          strokeWidth="10"
+        />
+        {/* Foreground circle */}
+        <circle
+          cx="70"
+          cy="70"
+          r={radius}
+          fill="none"
+          className={`${ringColor} transition-all duration-1000 ease-out`}
+          strokeWidth="10"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <span className={`absolute text-3xl font-extrabold ${textColor}`}>
+        {score}%
+      </span>
+    </div>
+  );
+}
+
 /* ────────────────────────────────────────────
    DashboardPage
    ──────────────────────────────────────────── */
@@ -61,7 +134,10 @@ export default function DashboardPage() {
 
   // Upload state
   const [uploading, setUploading] = useState(false);
+  const [uploadMsgIndex, setUploadMsgIndex] = useState(0);
+  const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadMsgTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Job form state
   const [showJobForm, setShowJobForm] = useState(false);
@@ -69,6 +145,9 @@ export default function DashboardPage() {
   const [jobCompany, setJobCompany] = useState("");
   const [jobDesc, setJobDesc] = useState("");
   const [jobSaving, setJobSaving] = useState(false);
+
+  // Job search
+  const [jobSearch, setJobSearch] = useState("");
 
   // Feedback
   const [error, setError] = useState("");
@@ -118,10 +197,8 @@ export default function DashboardPage() {
     }
   }
 
-  // ── Handlers ──
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // ── Shared upload logic ──
+  const uploadFile = useCallback(async (file: File) => {
     setError("");
     setSuccess("");
     setUploading(true);
@@ -134,9 +211,48 @@ export default function DashboardPage() {
       setError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  }, []);
+
+  // ── Handlers ──
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  // Drag-and-drop handlers
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    // Validate file type client-side for immediate feedback
+    const allowed = [".pdf", ".docx", ".doc", ".txt", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain"];
+    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+    if (!allowed.includes(file.type) && !allowed.includes(ext)) {
+      setError("Unsupported file type. Please upload a PDF, DOCX, or TXT file.");
+      return;
+    }
+
+    await uploadFile(file);
+  }, [uploadFile]);
 
   const handleSelectRecommended = (jobId: string) => {
     setSelectedJobId(jobId);
@@ -250,14 +366,52 @@ export default function DashboardPage() {
               </label>
             </div>
 
-            {resumes.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-8 text-muted">
-                <Upload className="h-8 w-8 opacity-40" />
-                <p className="text-sm">No resumes uploaded yet.</p>
-                <p className="text-xs opacity-60">Upload a PDF, DOCX, or TXT file to get started.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
+            {/* Drop zone */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`relative rounded-lg border-2 border-dashed p-8 text-center transition-all duration-150 ${
+                dragOver
+                  ? "border-primary bg-primary/10 scale-[1.02]"
+                  : "border-border hover:border-primary/40 hover:bg-muted-bg/30"
+              } ${uploading ? "pointer-events-none opacity-60" : ""}`}
+            >
+              {/* Hidden file input for click-to-upload inside drop zone */}
+              <input
+                type="file"
+                accept=".pdf,.docx,.doc,.txt"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={uploading}
+              />
+
+              {uploading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted">Uploading resume…</p>
+                </div>
+              ) : dragOver ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Upload className="h-8 w-8 text-primary" />
+                  <p className="text-sm font-medium text-primary">Drop your file here</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <Upload className="h-8 w-8 text-muted opacity-40" />
+                  <p className="text-sm text-muted">
+                    <span className="text-primary underline decoration-primary/30 underline-offset-2 cursor-pointer">Click to upload</span>{" "}
+                    or drag and drop
+                  </p>
+                  <p className="text-xs text-muted opacity-60">PDF, DOCX, or TXT (max 5 MB)</p>
+                </div>
+              )}
+            </div>
+
+            {/* Resume list */}
+            {resumes.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-medium text-muted uppercase tracking-wider">Uploaded resumes</p>
                 {resumes.map((r) => (
                   <button
                     key={r.id}

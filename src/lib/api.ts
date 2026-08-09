@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase, supabaseUrl } from "./supabase";
 
 // ============================================================
 // Types
@@ -62,12 +62,12 @@ export function getCurrentUser() {
 // ============================================================
 
 function functionUrl(name: string): string {
-  return `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${name}`;
+  return `${supabaseUrl}/functions/v1/${name}`;
 }
 
 async function authHeaders(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  const token = data?.session?.access_token;
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -83,8 +83,8 @@ async function authHeaders(): Promise<Record<string, string>> {
  * Text extraction runs in the background automatically.
  */
 export async function uploadResume(file: File): Promise<ResumeUploadResult> {
-  const { data: session } = await supabase.auth.getSession();
-  const token = session?.session?.access_token;
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
 
   const formData = new FormData();
   formData.append("file", file);
@@ -105,7 +105,7 @@ export async function uploadResume(file: File): Promise<ResumeUploadResult> {
  */
 export async function listResumes() {
   const headers = await authHeaders();
-  const res = await fetch(functionUrl("match-history"), {
+  const res = await fetch(functionUrl("match-history") + "?mode=resumes", {
     method: "GET",
     headers,
   });
@@ -113,6 +113,23 @@ export async function listResumes() {
   const body = await res.json();
   if (!res.ok) throw new Error(body.error || "Failed to fetch resumes.");
   return body.resumes;
+}
+
+export async function deleteResume(resumeId: string): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
+
+  const res = await fetch(functionUrl("delete-resume"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ resume_id: resumeId }),
+  });
+
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error || "Failed to delete resume.");
 }
 
 // ============================================================
