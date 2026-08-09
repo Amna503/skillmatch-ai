@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { signUp } from "../lib/api";
-import { Brain, UserPlus, Eye, EyeOff } from "lucide-react";
+import { Sparkles, UserPlus, Eye, EyeOff } from "lucide-react";
+import ThemeToggle from "../components/ThemeToggle";
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -44,27 +45,30 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center bg-page px-4 transition-colors duration-200">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 shadow-glow">
-            <Brain className="h-7 w-7 text-primary" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-gradient-from to-accent-gradient-to shadow-glow">
+            <Sparkles className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Create your account</h1>
-          <p className="mt-1 text-sm text-muted">Start matching resumes to jobs with AI</p>
+          <h1 className="text-2xl font-extrabold text-foreground font-heading">Create your account</h1>
+          <p className="mt-1.5 text-sm text-muted">Start matching resumes to jobs with AI</p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="card-base space-y-4">
+        <form onSubmit={handleSubmit} className="card-base space-y-5">
           {error && (
-            <div className="rounded-lg bg-error-bg border border-destructive/30 px-4 py-2.5 text-sm text-destructive">
-              {error}
+            <div className="flex items-center gap-2.5 rounded-xl bg-error-bg border border-destructive/30 px-4 py-3 text-sm text-destructive">
+              <span>{error}</span>
             </div>
           )}
           {success && (
-            <div className="rounded-lg bg-success-bg border border-success/30 px-4 py-2.5 text-sm text-success">
-              {success}
+            <div className="flex items-center gap-2.5 rounded-xl bg-success-bg border border-success/30 px-4 py-3 text-sm text-success">
+              <span>{success}</span>
             </div>
           )}
 
@@ -95,17 +99,17 @@ export default function SignupPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-field pr-10"
+                className="input-field pr-12"
                 placeholder="Min. 6 characters"
                 autoComplete="new-password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground cursor-pointer transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground cursor-pointer transition-colors rounded-lg p-1"
                 tabIndex={-1}
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
           </div>
@@ -143,7 +147,7 @@ export default function SignupPage() {
 
         <p className="mt-6 text-center text-sm text-muted">
           Already have an account?{" "}
-          <Link to="/login" className="font-medium text-primary hover:text-primary-hover transition-colors">
+          <Link to="/login" className="font-semibold text-primary hover:text-primary-hover transition-colors">
             Sign in
           </Link>
         </p>
