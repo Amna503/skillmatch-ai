@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { getMatchHistory, type MatchResult } from "../lib/api";
 import {
   BarChart3,
-  Sparkles,
   ChevronDown,
   ChevronUp,
   Clock,
