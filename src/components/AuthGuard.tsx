@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { Brain } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 interface Props {
   children: ReactNode;
@@ -35,10 +35,12 @@ export default function AuthGuard({ children }: Props) {
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <Brain className="h-8 w-8 text-primary animate-pulse" />
-          <p className="text-sm text-muted">Loading…</p>
+      <div className="flex min-h-screen items-center justify-center bg-page transition-colors duration-200">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-accent-gradient-from to-accent-gradient-to shadow-glow animate-pulse">
+            <Sparkles className="h-6 w-6 text-white" />
+          </div>
+          <p className="text-sm text-muted animate-pulse">Loading…</p>
         </div>
       </div>
     );
