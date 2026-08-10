@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { signUp } from "../lib/api";
 import { UserPlus, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
 import LoadingScreen, { usePageLoader } from "../components/LoadingScreen";
+import SocialLoginButtons from "../components/SocialLoginButtons";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
