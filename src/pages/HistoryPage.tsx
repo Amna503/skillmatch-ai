@@ -9,7 +9,7 @@ import {
   Briefcase,
   AlertCircle,
 } from "lucide-react";
-import LoadingScreen, { usePageSplash } from "../components/LoadingScreen";
+import LoadingScreen, { usePageLoader } from "../components/LoadingScreen";
 
 /* ────────────────────────────────────────────
    Helpers

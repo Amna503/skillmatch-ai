@@ -157,7 +157,7 @@ export default function DashboardPage() {
   const [success, setSuccess] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTimerRef = useRef<ReturnType<typeof setInterval>>();
-  const showSplash = usePageSplash();
+  const { loading: showSplash, markLoaded } = usePageLoader();
 
   const canMatch = !!selectedResumeId && !!selectedJobId && !matchLoading;
   const filteredJobs = jobSearch.trim()
@@ -170,9 +170,11 @@ export default function DashboardPage() {
       if (cancelled) return; setResumes(res); setJobs(jbs);
     }).catch((err) => {
       if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load data.");
-    }).finally(() => { if (!cancelled) setInitialLoading(false); });
+    }).finally(() => {
+      if (!cancelled) { setInitialLoading(false); markLoaded(); }
+    });
     return () => { cancelled = true; };
-  }, []);
+  }, [markLoaded]);
 
   useEffect(() => {
     if (!selectedResumeId) { setRecommendedJobs([]); return; }
