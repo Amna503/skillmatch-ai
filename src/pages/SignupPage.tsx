@@ -1,8 +1,19 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { signUp } from "../lib/api";
-import { Sparkles, UserPlus, Eye, EyeOff } from "lucide-react";
+import { UserPlus, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
+import Logo from "../components/Logo";
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
+interface FieldErrors {
+  email?: string;
+  password?: string;
+  confirm?: string;
+}
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -10,126 +21,232 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [created, setCreated] = useState(false);
+
+  const validate = (): boolean => {
+    const errs: FieldErrors = {};
+    if (!email.trim()) {
+      errs.email = "Please enter your email address.";
+    } else if (!isValidEmail(email)) {
+      errs.email = "That email doesn't look quite right — check it and try again.";
+    }
+    if (!password) {
+      errs.password = "Please create a password.";
+    } else if (password.length < 6) {
+      errs.password = "Use at least 6 characters for your password.";
+    }
+    if (!confirmPassword) {
+      errs.confirm = "Please confirm your password.";
+    } else if (confirmPassword !== password) {
+      errs.confirm = "Passwords don't match — please re-enter.";
+    }
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-
+    setFormError("");
+    if (!validate()) return;
     setLoading(true);
     try {
-      const data = await signUp(email, password);
+      const data = await signUp(email.trim(), password);
       if (data.user?.identities?.length === 0) {
-        setError("An account with this email already exists.");
-      } else {
-        setSuccess("Account created! Check your email to confirm your account, or try signing in.");
-        setTimeout(() => navigate("/login"), 2500);
+        setFormError(
+          "An account with this email already exists. Try logging in instead."
+        );
+        return;
       }
+      setCreated(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign up failed.");
+      setFormError(
+        err instanceof Error ? err.message : "Sign up failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Success state ──
+  if (created) {
+    return (
+      <div className="relative flex min-h-screen items-center justify-center bg-page px-4 py-10 transition-colors duration-200">
+        <div className="absolute right-4 top-4">
+          <ThemeToggle />
+        </div>
+        <div className="w-full max-w-[420px]">
+          {/* Same branding */}
+          <div className="mb-8 flex flex-col items-center text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-gradient-from to-accent-gradient-to shadow-glow">
+              <Logo className="h-9 w-9 text-on-primary" />
+            </div>
+            <h1 className="text-heading font-heading text-2xl font-extrabold tracking-tight">
+              SkillMatch AI
+            </h1>
+          </div>
+
+          <div className="card-base !p-8 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success-bg border border-success/30">
+              <CheckCircle2 className="h-7 w-7 text-success" />
+            </div>
+            <h2 className="text-heading font-heading text-xl font-extrabold">
+              Account created!
+            </h2>
+            <p className="mt-2 text-sm text-muted leading-relaxed">
+              Check{" "}
+              <span className="font-medium text-foreground">{email}</span> for a
+              confirmation link — you&apos;ll need to confirm before logging in.
+            </p>
+            <button
+              onClick={() => navigate("/login")}
+              className="btn-primary mt-6 w-full"
+            >
+              Go to Log In
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Form state ──
   return (
-    <div className="flex min-h-screen items-center justify-center bg-page px-4 transition-colors duration-200">
+    <div className="relative flex min-h-screen items-center justify-center bg-page px-4 py-10 transition-colors duration-200">
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-gradient-from to-accent-gradient-to shadow-glow">
-            <Sparkles className="h-8 w-8 text-white" />
+
+      <div className="w-full max-w-[420px]">
+        {/* Branding */}
+        <div className="mb-8 flex flex-col items-center text-center">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-gradient-from to-accent-gradient-to shadow-glow">
+            <Logo className="h-9 w-9 text-on-primary" />
           </div>
-          <h1 className="text-2xl font-extrabold text-foreground font-heading">Create your account</h1>
-          <p className="mt-1.5 text-sm text-muted">Start matching resumes to jobs with AI</p>
+          <h1 className="text-heading font-heading text-2xl font-extrabold tracking-tight">
+            SkillMatch AI
+          </h1>
+          <p className="mt-1.5 text-sm text-muted">
+            Create your account to get started
+          </p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="card-base space-y-5">
-          {error && (
-            <div className="flex items-center gap-2.5 rounded-xl bg-error-bg border border-destructive/30 px-4 py-3 text-sm text-destructive">
-              <span>{error}</span>
-            </div>
-          )}
-          {success && (
-            <div className="flex items-center gap-2.5 rounded-xl bg-success-bg border border-success/30 px-4 py-3 text-sm text-success">
-              <span>{success}</span>
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          className="card-base space-y-5 !p-6 sm:!p-8"
+        >
+          {formError && (
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 rounded-xl border border-destructive/30 bg-error-bg px-4 py-3 text-sm text-destructive"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{formError}</span>
             </div>
           )}
 
+          {/* Email */}
           <div>
-            <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-foreground">
+            <label
+              htmlFor="email"
+              className="mb-1.5 block text-sm font-medium text-heading"
+            >
               Email
             </label>
             <input
               id="email"
               type="email"
-              required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input-field"
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (fieldErrors.email)
+                  setFieldErrors((p) => ({ ...p, email: undefined }));
+              }}
+              className={`input-field ${fieldErrors.email ? "!border-destructive" : ""}`}
               placeholder="you@example.com"
               autoComplete="email"
+              aria-invalid={Boolean(fieldErrors.email)}
             />
+            {fieldErrors.email && (
+              <p className="mt-1.5 text-sm text-destructive">
+                {fieldErrors.email}
+              </p>
+            )}
           </div>
 
+          {/* Password */}
           <div>
-            <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-foreground">
+            <label
+              htmlFor="password"
+              className="mb-1.5 block text-sm font-medium text-heading"
+            >
               Password
             </label>
             <div className="relative">
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
-                required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input-field pr-12"
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (fieldErrors.password)
+                    setFieldErrors((p) => ({ ...p, password: undefined }));
+                }}
+                className={`input-field pr-12 ${fieldErrors.password ? "!border-destructive" : ""}`}
                 placeholder="Min. 6 characters"
                 autoComplete="new-password"
+                aria-invalid={Boolean(fieldErrors.password)}
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground cursor-pointer transition-colors rounded-lg p-1"
-                tabIndex={-1}
+                onClick={() => setShowPassword((s) => !s)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-muted transition-colors hover:text-heading cursor-pointer"
               >
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
+            {fieldErrors.password && (
+              <p className="mt-1.5 text-sm text-destructive">
+                {fieldErrors.password}
+              </p>
+            )}
           </div>
 
+          {/* Confirm password */}
           <div>
-            <label htmlFor="confirm-password" className="mb-1.5 block text-sm font-medium text-foreground">
+            <label
+              htmlFor="confirm-password"
+              className="mb-1.5 block text-sm font-medium text-heading"
+            >
               Confirm password
             </label>
             <input
               id="confirm-password"
               type="password"
-              required
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="input-field"
-              placeholder="Re-enter password"
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                if (fieldErrors.confirm)
+                  setFieldErrors((p) => ({ ...p, confirm: undefined }));
+              }}
+              className={`input-field ${fieldErrors.confirm ? "!border-destructive" : ""}`}
+              placeholder="Re-enter your password"
               autoComplete="new-password"
+              aria-invalid={Boolean(fieldErrors.confirm)}
             />
+            {fieldErrors.confirm && (
+              <p className="mt-1.5 text-sm text-destructive">
+                {fieldErrors.confirm}
+              </p>
+            )}
           </div>
 
+          {/* Submit */}
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? (
               <span className="flex items-center gap-2">
@@ -139,7 +256,7 @@ export default function SignupPage() {
             ) : (
               <span className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4" />
-                Sign up
+                Sign Up
               </span>
             )}
           </button>
@@ -147,8 +264,11 @@ export default function SignupPage() {
 
         <p className="mt-6 text-center text-sm text-muted">
           Already have an account?{" "}
-          <Link to="/login" className="font-semibold text-primary hover:text-primary-hover transition-colors">
-            Sign in
+          <Link
+            to="/login"
+            className="font-semibold text-primary transition-colors hover:text-primary-hover"
+          >
+            Log in
           </Link>
         </p>
       </div>

@@ -9,7 +9,7 @@ export default function Footer() {
         {/* Left */}
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-foreground">
+          <span className="text-sm font-semibold text-heading">
             SkillMatch AI
           </span>
           <span className="hidden text-sm text-muted sm:inline">

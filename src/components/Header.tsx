@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, User, Sparkles, LayoutDashboard, History } from "lucide-react";
+import { LogOut, User, LayoutDashboard, History } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import ThemeToggle from "./ThemeToggle";
+import Logo from "./Logo";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -34,9 +35,9 @@ export default function Header() {
           className="flex items-center gap-2.5 text-foreground cursor-pointer group"
         >
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-accent-gradient-from to-accent-gradient-to shadow-glow transition-all duration-200 group-hover:scale-105">
-            <Sparkles className="h-5 w-5 text-white" />
+            <Logo className="h-5 w-5 text-on-primary" />
           </div>
-          <span className="text-lg font-extrabold tracking-tight font-heading">
+          <span className="text-lg font-extrabold tracking-tight font-heading text-heading">
             SkillMatch AI
           </span>
         </button>

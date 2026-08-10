@@ -51,7 +51,7 @@ function MatchResultsSection({ result }: { result: MatchResult }) {
   return (
     <section className="card-base !border-primary/20 !shadow-glow">
       <button onClick={() => setExpanded(!expanded)} className="flex w-full items-center justify-between cursor-pointer">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-heading">
           <Sparkles className="h-5 w-5 text-primary" /> Match Results
         </h2>
         {expanded ? <ChevronUp className="h-5 w-5 text-muted" /> : <ChevronDown className="h-5 w-5 text-muted" />}
@@ -103,7 +103,7 @@ function MatchResultsSection({ result }: { result: MatchResult }) {
           </div>
           {result.summary && (
             <div className="rounded-xl border border-border bg-card-hover/50 p-4">
-              <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground mb-2">
+              <h3 className="flex items-center gap-1.5 text-sm font-bold text-heading mb-2">
                 <Lightbulb className="h-4 w-4 text-primary" /> Recommendations
               </h3>
               <p className="text-sm text-muted leading-relaxed">{result.summary}</p>
@@ -272,7 +272,7 @@ export default function DashboardPage() {
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
       <div className="text-center sm:text-left">
         <div>
-          <h1 className="text-3xl font-extrabold text-foreground font-heading sm:text-4xl tracking-tight">Resume &amp; Job Matcher</h1>
+          <h1 className="text-3xl font-extrabold text-heading font-heading sm:text-4xl tracking-tight">Resume &amp; Job Matcher</h1>
           <p className="mt-2 text-base text-muted max-w-xl">Upload your resume, paste or snap a job description — AI instantly tells you how well you fit.</p>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3 justify-center sm:justify-start">
@@ -303,7 +303,7 @@ export default function DashboardPage() {
             {/* LEFT: RESUME PANEL */}
             <section className="card-base !p-0 overflow-hidden">
               <div className="border-b border-border px-6 py-4 flex items-center justify-between">
-                <h2 className="flex items-center gap-2 text-base font-bold text-foreground"><FileText className="h-5 w-5 text-primary" /> Resume</h2>
+                <h2 className="flex items-center gap-2 text-base font-bold text-heading"><FileText className="h-5 w-5 text-primary" /> Resume</h2>
                 <label className="btn-primary text-xs !px-4 !py-2 !min-h-[0] cursor-pointer">
                   <Upload className="h-4 w-4" />{uploading ? "Uploading…" : "Upload"}
                   <input ref={fileInputRef} type="file" accept=".pdf,.docx,.doc,.txt" onChange={handleFileUpload} className="hidden" disabled={uploading} />
@@ -363,7 +363,7 @@ export default function DashboardPage() {
             {/* RIGHT: JOB DESCRIPTION PANEL */}
             <section className="card-base !p-0 overflow-hidden">
               <div className="border-b border-border px-6 py-4 flex items-center justify-between">
-                <h2 className="flex items-center gap-2 text-base font-bold text-foreground"><Briefcase className="h-5 w-5 text-primary" /> Job Description</h2>
+                <h2 className="flex items-center gap-2 text-base font-bold text-heading"><Briefcase className="h-5 w-5 text-primary" /> Job Description</h2>
                 {!showJobForm && !showExtractedPreview && (
                   <button onClick={() => { setShowJobForm(true); setJobInputMode("text"); }} className="btn-primary text-xs !px-4 !py-2 !min-h-[0]">+ New</button>
                 )}
@@ -521,7 +521,7 @@ export default function DashboardPage() {
             <section className="card-base">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold text-foreground">Recommended for You</h2>
+                <h2 className="text-lg font-semibold text-heading">Recommended for You</h2>
                 {recommending && <Loader2 className="h-4 w-4 animate-spin text-muted" />}
               </div>
               {recommending ? (

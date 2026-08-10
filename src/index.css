@@ -11,6 +11,7 @@
   --color-card-hover: #F3F4F6;
   --color-border: #E5E7EB;
   --color-foreground: #1F2937;
+  --color-heading: #1F2937;
   --color-muted: #6B7280;
   --color-primary: #4F86F7;
   --color-primary-hover: #3B72D5;
@@ -33,30 +34,31 @@
 }
 
 [data-theme="dark"] {
-  --color-page: #0F1123;
-  --color-card: #1A1D3A;
-  --color-card-hover: #222650;
-  --color-border: #2D2D5A;
-  --color-foreground: #E5E7EB;
-  --color-muted: #9CA3AF;
-  --color-primary: #8B5CF6;
-  --color-primary-hover: #7C3AED;
-  --color-ring: #8B5CF6;
-  --color-glow: rgba(139, 92, 246, 0.3);
-  --color-accent-gradient-from: #6366F1;
-  --color-accent-gradient-to: #8B5CF6;
-  --color-card-glow-border: rgba(139, 92, 246, 0.2);
-  --color-success: #4CAF82;
-  --color-warning: #F59E0B;
-  --color-destructive: #EF4444;
-  --color-success-bg: rgba(76, 175, 130, 0.15);
-  --color-warning-bg: rgba(245, 166, 35, 0.15);
-  --color-error-bg: rgba(239, 68, 68, 0.15);
-  --color-muted-bg: #1A1D3A;
-  --color-on-primary: #FFFFFF;
-  --skeleton-base: #1A1D3A;
-  --skeleton-shine: #222650;
-  --scrollbar-thumb: #2D2D5A;
+  --color-page: #12141F;
+  --color-card: #1C1F2E;
+  --color-card-hover: #242840;
+  --color-border: #2A2E42;
+  --color-foreground: #D8DCE5;
+  --color-heading: #F0F1F5;
+  --color-muted: #8A8FA3;
+  --color-primary: #7C9EFF;
+  --color-primary-hover: #93B0FF;
+  --color-ring: #7C9EFF;
+  --color-glow: rgba(124, 158, 255, 0.22);
+  --color-accent-gradient-from: #7C9EFF;
+  --color-accent-gradient-to: #6689F2;
+  --color-card-glow-border: rgba(124, 158, 255, 0.18);
+  --color-success: #5FD4A0;
+  --color-warning: #F5B860;
+  --color-destructive: #F0776B;
+  --color-success-bg: rgba(95, 212, 160, 0.12);
+  --color-warning-bg: rgba(245, 184, 96, 0.12);
+  --color-error-bg: rgba(240, 119, 107, 0.12);
+  --color-muted-bg: #1C1F2E;
+  --color-on-primary: #0E1120;
+  --skeleton-base: #1C1F2E;
+  --skeleton-shine: #262B41;
+  --scrollbar-thumb: #2A2E42;
 }
 
 @theme {
@@ -68,6 +70,7 @@
   --color-card-hover: var(--color-card-hover);
   --color-border: var(--color-border);
   --color-foreground: var(--color-foreground);
+  --color-heading: var(--color-heading);
   --color-muted: var(--color-muted);
   --color-primary: var(--color-primary);
   --color-primary-hover: var(--color-primary-hover);
@@ -95,7 +98,7 @@
   --shadow-card: 0 1px 3px rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-card-hover: 0 4px 12px rgb(0 0 0 / 0.5);
   --shadow-glow: 0 0 24px var(--color-glow);
-  --shadow-btn: 0 2px 8px rgba(99, 102, 241, 0.4);
+  --shadow-btn: 0 2px 10px rgba(124, 158, 255, 0.35);
 }
 
 /* ── Base layer ── */

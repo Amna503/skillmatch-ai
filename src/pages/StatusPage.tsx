@@ -28,7 +28,7 @@ export default function StatusPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans">
+    <div className="min-h-screen bg-page text-foreground font-sans">
       <div className="mx-auto max-w-2xl px-4 py-16">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold">🚦 SkillMatch AI</h1>

@@ -78,7 +78,7 @@ export default function HistoryPage() {
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
       {/* Heading */}
       <div className="mb-6">
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground sm:text-3xl">
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-heading sm:text-3xl">
           <BarChart3 className="h-7 w-7 text-primary" />
           Match History
         </h1>
