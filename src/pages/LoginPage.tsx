@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { signIn, resetPassword } from "../lib/api";
 import { LogIn, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
 import LoadingScreen, { usePageLoader } from "../components/LoadingScreen";
-import SocialLoginButtons from "../components/SocialLoginButtons";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -32,9 +31,7 @@ interface FieldErrors {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { loading: showSplash, markLoaded } = usePageLoader();
-
-  useEffect(() => { markLoaded(); }, [markLoaded]);
+  const { loading: showSplash } = usePageLoader();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -242,19 +239,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        {/* Social login */}
-        <div className="mt-6">
-          <div className="relative mb-5">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-page px-3 text-muted">or continue with</span>
-            </div>
-          </div>
-          <SocialLoginButtons />
-        </div>
 
         <p className="mt-6 text-center text-sm text-muted">
           Don&apos;t have an account?{" "}
