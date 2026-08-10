@@ -78,6 +78,26 @@ export function getCurrentUser() {
   return supabase.auth.getUser();
 }
 
+/**
+ * Social / OAuth sign‑in: redirects to the provider's consent screen, then back
+ * to the Dashboard (via the Supabase callback & AuthGuard).
+ * Error is surfaced as a thrown message so calling pages can show friendly errors.
+ */
+export async function signInWithOAuth(provider: "google" | "github" | "apple") {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${window.location.origin}/`,
+    },
+  });
+  // Implicit flow — signInWithOAuth redirects the page before the promise resolves
+  // on success, but if it fails synchronously we surface the error.
+  if (error) throw new Error(error.message);
+  // `data.url` may be present for PKCE flows; for implicit flows the redirect
+  // happens automatically. Return so the caller can await.
+  return data;
+}
+
 // ============================================================
 // Edge Function helpers
 // ============================================================

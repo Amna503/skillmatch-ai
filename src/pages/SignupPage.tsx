@@ -4,7 +4,7 @@ import { signUp } from "../lib/api";
 import { UserPlus, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
-import LoadingScreen, { usePageSplash } from "../components/LoadingScreen";
+import LoadingScreen, { usePageLoader } from "../components/LoadingScreen";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -18,7 +18,7 @@ interface FieldErrors {
 
 export default function SignupPage() {
   const navigate = useNavigate();
-  const showSplash = usePageSplash();
+  const { loading: showSplash } = usePageLoader();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

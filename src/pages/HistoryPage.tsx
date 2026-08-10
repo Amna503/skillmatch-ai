@@ -34,7 +34,7 @@ function scoreColor(score: number) {
    HistoryPage
    ──────────────────────────────────────────── */
 export default function HistoryPage() {
-  const showSplash = usePageSplash();
+  const { loading: showSplash, markLoaded } = usePageLoader();
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -42,6 +42,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadHistory() {
@@ -54,6 +55,7 @@ export default function HistoryPage() {
       setError(err instanceof Error ? err.message : "Failed to load history.");
     } finally {
       setLoading(false);
+      markLoaded();
     }
   }
 
