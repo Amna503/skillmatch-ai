@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { signIn, resetPassword } from "../lib/api";
 import { LogIn, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
 import LoadingScreen, { usePageLoader } from "../components/LoadingScreen";
+import SocialLoginButtons from "../components/SocialLoginButtons";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -31,7 +32,9 @@ interface FieldErrors {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { loading: showSplash } = usePageLoader();
+  const { loading: showSplash, markLoaded } = usePageLoader();
+
+  useEffect(() => { markLoaded(); }, [markLoaded]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
