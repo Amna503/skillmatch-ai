@@ -10,7 +10,7 @@ import {
   Lightbulb, Loader2, AlertCircle, Target, ChevronDown, ChevronUp,
   Clock, TrendingUp, Trash2, Link, Image, ScrollText, Zap,
 } from "lucide-react";
-import LoadingScreen, { usePageSplash } from "../components/LoadingScreen";
+import LoadingScreen, { usePageLoader } from "../components/LoadingScreen";
 
 function formatDate(iso: string) {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));

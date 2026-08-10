@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useRef, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { Sparkles } from "lucide-react";
@@ -7,21 +7,64 @@ interface Props {
   children: ReactNode;
 }
 
+const SESSION_TIMEOUT_MS = 10_000; // 10s safety net
+
 export default function AuthGuard({ children }: Props) {
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "authenticated" | "unauthenticated">("loading");
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setStatus("authenticated");
-      } else {
-        setStatus("unauthenticated");
-        navigate("/login", { replace: true });
-      }
-    });
+    let mounted = true;
 
+    // Safety timeout: if getSession hangs longer than SESSION_TIMEOUT_MS,
+    // treat as unauthenticated so the user isn't stuck on a blank loading page.
+    timeoutRef.current = setTimeout(() => {
+      if (!mounted) return;
+      console.warn("[AuthGuard] Session check timed out — redirecting to login.");
+      setStatus("unauthenticated");
+      navigate("/login", { replace: true });
+    }, SESSION_TIMEOUT_MS);
+
+    // Primary session check
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (!mounted) return;
+        clearTimeout(timeoutRef.current);
+        if (session) {
+          setStatus("authenticated");
+        } else {
+          setStatus("unauthenticated");
+          navigate("/login", { replace: true });
+        }
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        clearTimeout(timeoutRef.current);
+        console.error("[AuthGuard] getSession error:", err);
+        // Fail-open: even if getSession threw, the user might still be logged in.
+        // Try getUser() as a fallback before redirecting.
+        supabase.auth.getUser()
+          .then(({ data: { user } }) => {
+            if (!mounted) return;
+            if (user) {
+              setStatus("authenticated");
+            } else {
+              setStatus("unauthenticated");
+              navigate("/login", { replace: true });
+            }
+          })
+          .catch(() => {
+            if (!mounted) return;
+            setStatus("unauthenticated");
+            navigate("/login", { replace: true });
+          });
+      });
+
+    // Listen for auth state changes
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      clearTimeout(timeoutRef.current);
       if (session) {
         setStatus("authenticated");
       } else {
@@ -30,7 +73,11 @@ export default function AuthGuard({ children }: Props) {
       }
     });
 
-    return () => listener?.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutRef.current);
+      listener?.subscription.unsubscribe();
+    };
   }, [navigate]);
 
   if (status === "loading") {
