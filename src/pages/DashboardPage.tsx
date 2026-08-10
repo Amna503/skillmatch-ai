@@ -10,6 +10,7 @@ import {
   Lightbulb, Loader2, AlertCircle, Target, ChevronDown, ChevronUp,
   Clock, TrendingUp, Trash2, Link, Image, ScrollText, Zap,
 } from "lucide-react";
+import LoadingScreen, { usePageSplash } from "../components/LoadingScreen";
 
 function formatDate(iso: string) {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
@@ -156,6 +157,7 @@ export default function DashboardPage() {
   const [success, setSuccess] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTimerRef = useRef<ReturnType<typeof setInterval>>();
+  const showSplash = usePageSplash();
 
   const canMatch = !!selectedResumeId && !!selectedJobId && !matchLoading;
   const filteredJobs = jobSearch.trim()
@@ -269,7 +271,10 @@ export default function DashboardPage() {
 
   /* ══ RENDER ══ */
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
+    <>
+      <LoadingScreen show={showSplash} />
+      <div className={`relative transition-opacity duration-500 ease-out ${showSplash ? "opacity-0" : "opacity-100"}`}>
+        <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
       <div className="text-center sm:text-left">
         <div>
           <h1 className="text-3xl font-extrabold text-heading font-heading sm:text-4xl tracking-tight">Resume &amp; Job Matcher</h1>
@@ -562,8 +567,10 @@ export default function DashboardPage() {
           )}
 
           {matchResult && <MatchResultsSection result={matchResult} />}
-        </>
-      )}
-    </div>
+          </>
+        )}
+        </div>
+      </div>
+    </>
   );
 }

@@ -9,6 +9,7 @@ import {
   Briefcase,
   AlertCircle,
 } from "lucide-react";
+import LoadingScreen, { usePageSplash } from "../components/LoadingScreen";
 
 /* ────────────────────────────────────────────
    Helpers
@@ -33,6 +34,7 @@ function scoreColor(score: number) {
    HistoryPage
    ──────────────────────────────────────────── */
 export default function HistoryPage() {
+  const showSplash = usePageSplash();
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -62,7 +64,10 @@ export default function HistoryPage() {
   /* ── Loading skeleton ── */
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+      <>
+        <LoadingScreen show={showSplash} />
+        <div className={`relative transition-opacity duration-500 ease-out ${showSplash ? "opacity-0" : "opacity-100"}`}>
+          <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="mb-6">
           <div className="skeleton h-8 w-48" />
           <div className="skeleton mt-2 h-4 w-64" />
@@ -70,13 +75,18 @@ export default function HistoryPage() {
         {[1, 2, 3].map((i) => (
           <div key={i} className="skeleton mb-3 h-20 w-full rounded-xl" />
         ))}
-      </div>
+          </div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
-      {/* Heading */}
+    <>
+      <LoadingScreen show={showSplash} />
+      <div className={`relative transition-opacity duration-500 ease-out ${showSplash ? "opacity-0" : "opacity-100"}`}>
+        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+          {/* Heading */}
       <div className="mb-6">
         <h1 className="flex items-center gap-2 text-2xl font-bold text-heading sm:text-3xl">
           <BarChart3 className="h-7 w-7 text-primary" />
@@ -230,6 +240,8 @@ export default function HistoryPage() {
           {matches.length} match{matches.length !== 1 ? "es" : ""} total
         </p>
       )}
-    </div>
+        </div>
+      </div>
+    </>
   );
 }

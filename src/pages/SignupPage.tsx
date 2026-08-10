@@ -4,6 +4,7 @@ import { signUp } from "../lib/api";
 import { UserPlus, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
+import LoadingScreen, { usePageSplash } from "../components/LoadingScreen";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -17,6 +18,7 @@ interface FieldErrors {
 
 export default function SignupPage() {
   const navigate = useNavigate();
+  const showSplash = usePageSplash();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -73,10 +75,13 @@ export default function SignupPage() {
   // ── Success state ──
   if (created) {
     return (
-      <div className="relative flex min-h-screen items-center justify-center bg-page px-4 py-10 transition-colors duration-200">
-        <div className="absolute right-4 top-4">
-          <ThemeToggle />
-        </div>
+      <>
+        <LoadingScreen show={showSplash} />
+        <div className={`relative min-h-screen transition-opacity duration-500 ease-out ${showSplash ? "opacity-0" : "opacity-100"}`}>
+          <div className="relative flex min-h-screen items-center justify-center bg-page px-4 py-10 transition-colors duration-200">
+            <div className="absolute right-4 top-4">
+              <ThemeToggle />
+            </div>
         <div className="w-full max-w-[420px]">
           {/* Same branding */}
           <div className="mb-8 flex flex-col items-center text-center">
@@ -106,18 +111,23 @@ export default function SignupPage() {
             >
               Go to Log In
             </button>
+            </div>
           </div>
         </div>
       </div>
-    );
+    </>
+  );
   }
 
   // ── Form state ──
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-page px-4 py-10 transition-colors duration-200">
-      <div className="absolute right-4 top-4">
-        <ThemeToggle />
-      </div>
+    <>
+      <LoadingScreen show={showSplash} />
+      <div className={`relative min-h-screen transition-opacity duration-500 ease-out ${showSplash ? "opacity-0" : "opacity-100"}`}>
+        <div className="relative flex min-h-screen items-center justify-center bg-page px-4 py-10 transition-colors duration-200">
+          <div className="absolute right-4 top-4">
+            <ThemeToggle />
+          </div>
 
       <div className="w-full max-w-[420px]">
         {/* Branding */}
@@ -271,7 +281,9 @@ export default function SignupPage() {
             Log in
           </Link>
         </p>
+        </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

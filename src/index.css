@@ -306,6 +306,24 @@
   animation: pulse-dot 1.5s ease-in-out infinite;
 }
 
+/* ── Splash screen (branded page-load loader) ── */
+@keyframes splash-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes splash-rise {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@utility splash-ring {
+  animation: splash-spin 1.2s linear infinite;
+}
+
+@utility splash-rise {
+  animation: splash-rise 0.6s ease-out both;
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 6px;

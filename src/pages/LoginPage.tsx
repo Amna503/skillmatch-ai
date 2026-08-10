@@ -4,6 +4,7 @@ import { signIn, resetPassword } from "../lib/api";
 import { LogIn, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
 import Logo from "../components/Logo";
+import LoadingScreen, { usePageSplash } from "../components/LoadingScreen";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -30,6 +31,7 @@ interface FieldErrors {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const showSplash = usePageSplash();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -99,10 +101,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-page px-4 py-10 transition-colors duration-200">
-      <div className="absolute right-4 top-4">
-        <ThemeToggle />
-      </div>
+    <>
+      <LoadingScreen show={showSplash} />
+      <div className={`relative min-h-screen transition-opacity duration-500 ease-out ${showSplash ? "opacity-0" : "opacity-100"}`}>
+        <div className="relative flex min-h-screen items-center justify-center bg-page px-4 py-10 transition-colors duration-200">
+          <div className="absolute right-4 top-4">
+            <ThemeToggle />
+          </div>
 
       <div className="w-full max-w-[420px]">
         {/* Branding */}
@@ -244,7 +249,9 @@ export default function LoginPage() {
             Sign up
           </Link>
         </p>
+        </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
